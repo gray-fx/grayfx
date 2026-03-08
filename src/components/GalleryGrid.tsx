@@ -7,12 +7,12 @@ import collage5 from "@/assets/collage-5.jpg";
 import collage6 from "@/assets/collage-6.jpg";
 
 const galleryImages = [
-  { src: heroBg1, title: "Golden Hour", category: "Landscape" },
-  { src: heroBg2, title: "City Lights", category: "Street" },
-  { src: collage4, title: "Autumn Portrait", category: "Portrait" },
-  { src: collage5, title: "Lines & Shadows", category: "Architecture" },
-  { src: heroBg3, title: "Morning Dew", category: "Macro" },
-  { src: collage6, title: "Ocean Sunset", category: "Landscape" },
+  { src: heroBg1, title: "@ Howard", category: "Football" },
+  { src: heroBg2, title: "@ Tower Hill", category: "Field Hockey" },
+  { src: collage4, title: "UnLocke the Light", category: "SL24 Foundation" },
+  { src: collage5, title: "DIAA Semifinals", category: "Volleyball" },
+  { src: heroBg3, title: "'Holy War'", category: "Basketball" },
+  { src: collage6, title: "@ Howard", category: "Football" },
 ];
 
 const GalleryGrid = () => {
