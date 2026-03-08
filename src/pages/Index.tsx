@@ -7,7 +7,7 @@ import GalleryGrid from "@/components/GalleryGrid";
 const socialLinks = [
   { icon: Instagram, label: "Instagram", href: "https://www.instagram.com/gr4yfx" },
   { icon: Camera, label: "Legacy Pics", href: "https://grayflickz.myportfolio.com/" },
-  { icon: Mail, label: "Email", href: "mailto:gr4yfx@example.com" },
+  { icon: Mail, label: "Email", href: "mailto:gr4yfx@gmail.com" },
 ];
 
 const Index = () => {
