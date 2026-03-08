@@ -5,42 +5,36 @@ import collage4 from "@/assets/collage-4.jpg";
 import collage5 from "@/assets/collage-5.jpg";
 import collage6 from "@/assets/collage-6.jpg";
 
-const collageItems = [
-  { src: heroBg1, rotate: -6, top: "5%", left: "2%", width: "35%", delay: 0 },
-  { src: heroBg2, rotate: 4, top: "8%", right: "3%", width: "30%", delay: 0.1 },
-  { src: collage4, rotate: -3, top: "30%", left: "15%", width: "25%", delay: 0.2 },
-  { src: heroBg3, rotate: 7, top: "45%", right: "8%", width: "28%", delay: 0.3 },
-  { src: collage5, rotate: -5, top: "55%", left: "5%", width: "30%", delay: 0.4 },
-  { src: collage6, rotate: 3, top: "70%", right: "12%", width: "32%", delay: 0.5 },
-];
+const images = [heroBg1, heroBg2, collage4, collage5, heroBg3, collage6];
+
+const rotations = [-3, 2, -2, 4, -4, 3];
 
 const PhotoCollage = () => {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {collageItems.map((item, i) => (
-        <div
-          key={i}
-          className="absolute shadow-2xl shadow-black/40 border-2 border-border/20 overflow-hidden"
-          style={{
-            transform: `rotate(${item.rotate}deg)`,
-            top: item.top,
-            left: item.left,
-            right: item.right,
-            width: item.width,
-            filter: "blur(2px) brightness(0.4)",
-            opacity: 0.7,
-          }}
-        >
-          <img
-            src={item.src}
-            alt=""
-            className="w-full h-auto object-cover"
-            loading="lazy"
-          />
-        </div>
-      ))}
-      {/* Overall dark overlay */}
-      <div className="absolute inset-0 bg-background/70" />
+      <div
+        className="absolute inset-[-10%] grid grid-cols-3 grid-rows-2 gap-3 p-4"
+        style={{ transform: "rotate(-4deg) scale(1.15)" }}
+      >
+        {images.map((src, i) => (
+          <div
+            key={i}
+            className="overflow-hidden rounded-sm"
+            style={{
+              transform: `rotate(${rotations[i]}deg)`,
+              filter: "blur(2px) brightness(0.35)",
+            }}
+          >
+            <img
+              src={src}
+              alt=""
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="absolute inset-0 bg-background/60" />
     </div>
   );
 };

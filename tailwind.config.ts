@@ -13,7 +13,7 @@ export default {
       },
     },
     fontFamily: {
-      display: ['Playfair Display', 'serif'],
+      display: ['Montserrat', 'sans-serif'],
       body: ['Raleway', 'sans-serif'],
     },
     extend: {
