@@ -51,7 +51,7 @@ const Index = () => {
             className="mt-10 flex flex-col gap-4 sm:flex-row"
           >
             <a
-              href="#"
+              href="https://grayfx.pixieset.com/"
               className="group inline-flex items-center gap-2 rounded-sm border border-primary bg-primary/10 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-primary-foreground"
             >
               <span>View Gallery</span>
@@ -134,9 +134,9 @@ const Index = () => {
           <ScrollSection delay={0.3}>
             <div className="mt-12 flex flex-wrap justify-center gap-8">
               {[
-                { number: "500+", label: "Sessions" },
-                { number: "10+", label: "Years" },
-                { number: "50+", label: "Awards" },
+                { number: "25,000+", label: "Accounts Reached" },
+                { number: "50+", label: "Events Attended" },
+                { number: "∞", label: "Possibilities" },
               ].map((stat) => (
                 <div key={stat.label} className="text-center">
                   <p className="font-display text-4xl font-bold text-primary">{stat.number}</p>
