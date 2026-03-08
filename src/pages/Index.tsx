@@ -51,7 +51,7 @@ const Index = () => {
             className="mt-10 flex flex-col gap-4 sm:flex-row"
           >
             <a
-              href="https://grayfx.pixieset.com/"
+              href="https://photos.grayfx.cam/"
               className="group inline-flex items-center gap-2 rounded-sm border border-primary bg-primary/10 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-primary-foreground"
             >
               <span>View Gallery</span>
@@ -176,7 +176,7 @@ const Index = () => {
           <ScrollSection delay={0.2}>
             <div className="mt-12 text-center">
               <a
-                href="#"
+                href="https://photos.grayfx.cam/"
                 className="group inline-flex items-center gap-2 rounded-sm border border-primary bg-primary/10 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-primary-foreground"
               >
                 <span>See Full Portfolio</span>
