@@ -12,11 +12,11 @@ export interface Photoshoot {
 }
 
 const photoshoots: Photoshoot[] = [
-  { name: "Senior Portraits – Alyssa", status: "Completed", date: "Mar 1, 2026", link: "https://example.com/alyssa" },
-  { name: "Basketball Playoffs", status: "Editing", date: "Mar 5, 2026" },
-  { name: "Spring Dance Promo", status: "Awaiting Edits", date: "Mar 7, 2026" },
-  { name: "Track & Field Meet", status: "Not Shot", date: "Mar 12, 2026" },
-  { name: "Graduation Headshots", status: "Not Shot", date: "Mar 15, 2026" },
+  { name: "Delaware Blue Coats", status: "Not Shot", date: "Mar 13, 2026" },
+  { name: "DEFC Soccer", status: "Completed", date: "Mar 1, 2026", link: "https://photos.grayfx.cam/defcsoccer/" },
+  { name: "DIAA Swimming Finals", status: "Completed", date: "Feb 28, 2026", link: "https://photos.grayfx.cam/saintmarksswimming/" },
+  { name: "SJB Intermediate Gray", status: "Completed", date: "Feb 27, 2026", link: "https://photos.grayfx.cam/sjbhoopsgraysmm/227atsmos/" },
+  { name: "SJB Varsity Y", status: "Completed", date: "Feb 17, 2026", link: "https://photos.grayfx.cam/stjohnsy/" },
 ];
 
 export default photoshoots;
