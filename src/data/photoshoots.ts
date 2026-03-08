@@ -8,6 +8,7 @@ export interface Photoshoot {
   name: string;
   status: ShootStatus;
   date?: string;
+  link?: string;
 }
 
 const photoshoots: Photoshoot[] = [
