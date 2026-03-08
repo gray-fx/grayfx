@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Camera, ArrowLeft, Circle, Clock, Pencil, CheckCircle2 } from "lucide-react";
+import { Camera, ArrowLeft, Circle, Clock, Pencil, CheckCircle2, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import photoshoots, { type ShootStatus } from "@/data/photoshoots";
 
@@ -53,12 +53,25 @@ const Status = () => {
                     <p className="text-xs text-muted-foreground font-body mt-0.5">{shoot.date}</p>
                   )}
                 </div>
+              <div className="flex items-center gap-3 shrink-0">
                 <span
-                  className={`inline-flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1 text-xs font-medium ${config.bg} ${config.color}`}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${config.bg} ${config.color}`}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {shoot.status}
                 </span>
+                {shoot.status === "Completed" && shoot.link && (
+                  <a
+                    href={shoot.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    View
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
               </motion.div>
             );
           })}
