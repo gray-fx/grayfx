@@ -12,7 +12,7 @@ const galleryImages = [
   { src: collage4, title: "UnLocke the Light", category: "SL24 Foundation" },
   { src: collage5, title: "DIAA Semifinals", category: "Volleyball" },
   { src: heroBg3, title: "'Holy War'", category: "Basketball" },
-  { src: collage6, title: "@ Howard", category: "Football" },
+  { src: collage6, title: "DIAA Finals", category: "Swimming" },
 ];
 
 const GalleryGrid = () => {
