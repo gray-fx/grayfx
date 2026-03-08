@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Camera, ArrowLeft, Circle, Clock, Pencil, CheckCircle2 } from "lucide-react";
+import { Camera, ArrowLeft, Circle, Clock, Pencil, CheckCircle2, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import photoshoots, { type ShootStatus } from "@/data/photoshoots";
 
