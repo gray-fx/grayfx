@@ -5,10 +5,9 @@ import ScrollSection from "@/components/ScrollSection";
 import GalleryGrid from "@/components/GalleryGrid";
 
 const socialLinks = [
-  { icon: Instagram, label: "Instagram", href: "#" },
-  { icon: Facebook, label: "Facebook", href: "#" },
-  { icon: Twitter, label: "X / Twitter", href: "#" },
-  { icon: Mail, label: "Email", href: "mailto:hello@example.com" },
+  { icon: Instagram, label: "Instagram", href: "https://www.instagram.com/gr4yfx" },
+  { icon: Camera, label: "Legacy Pics", href: "https://grayflickz.myportfolio.com/" },
+  { icon: Mail, label: "Email", href: "mailto:gr4yfx@example.com" },
 ];
 
 const Index = () => {
