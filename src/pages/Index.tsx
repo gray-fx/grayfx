@@ -33,7 +33,7 @@ const Index = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="mt-6 font-display text-5xl font-bold tracking-tight text-foreground md:text-7xl"
           >
-            Your Name
+            GrayFX
           </motion.h1>
 
           <motion.p
@@ -55,14 +55,14 @@ const Index = () => {
               href="#"
               className="group inline-flex items-center gap-2 rounded-sm border border-primary bg-primary/10 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-primary-foreground"
             >
-              <span>View Portfolio</span>
+              <span>View Gallery</span>
               <ExternalLink className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
             <a
               href="#"
               className="group inline-flex items-center gap-2 rounded-sm border border-border bg-secondary/50 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-foreground transition-all hover:border-primary hover:text-primary"
             >
-              <span>Book a Session</span>
+              <span>Book With Me</span>
               <ExternalLink className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
           </motion.div>
@@ -120,15 +120,15 @@ const Index = () => {
 
           <ScrollSection delay={0.2}>
             <p className="mt-8 font-body text-lg leading-relaxed text-muted-foreground">
-              Based in Newark, Delaware, I specialize in capturing the extraordinary
-              in the everyday. From sweeping landscapes to intimate portraits, my work
-              explores the interplay of light, shadow, and emotion.
+              Based in Newark, Delaware, I capture the extraordinary in everyday moments. 
+              While I specialize in sports photography, my work also spans 
+              landscapes, nature, and portraits.
             </p>
             <p className="mt-6 font-body text-lg leading-relaxed text-muted-foreground">
-              With over a decade behind the lens, I bring a cinematic eye and a
-              passion for storytelling to every shoot. Whether it's a golden-hour
-              session in the countryside or an urban exploration after dark, I'm
-              dedicated to creating images that resonate.
+              My approach blends technical skill with a passion for storytelling, 
+              ensuring every shot tells a unique story. Whether it’s the intensity 
+              of a game, the serenity of a landscape, or the personality in a portrait, 
+              I aim to create images that resonate and leave a lasting impression.
             </p>
           </ScrollSection>
 
