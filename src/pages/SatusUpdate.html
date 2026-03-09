@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Photoshoot Code Generator</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+--background:#0d0d0d;
+--card:#1a1a1a;
+--border:#2a2a2a;
+--text:#f2f2f2;
+--muted:#9b9b9b;
+--accent:#3fa7d6;
+--radius:8px;
+}
+
+body{
+background:var(--background);
+color:var(--text);
+font-family:'Raleway',sans-serif;
+margin:0;
+padding:40px;
+}
+
+h1{
+font-family:'Montserrat',sans-serif;
+font-size:32px;
+margin-bottom:25px;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+}
+
+.card{
+background:var(--card);
+border:1px solid var(--border);
+border-radius:var(--radius);
+padding:25px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-bottom:20px;
+}
+
+th{
+text-align:left;
+font-weight:600;
+font-family:'Montserrat';
+padding-bottom:10px;
+color:var(--muted);
+}
+
+td{
+padding:8px 4px;
+}
+
+input, select{
+width:100%;
+background:#111;
+border:1px solid var(--border);
+border-radius:6px;
+padding:8px;
+color:var(--text);
+font-family:'Raleway';
+}
+
+input:focus, select:focus{
+outline:none;
+border-color:var(--accent);
+}
+
+button{
+background:var(--accent);
+border:none;
+color:white;
+padding:8px 12px;
+border-radius:6px;
+font-family:'Montserrat';
+font-weight:600;
+cursor:pointer;
+margin-right:6px;
+transition:0.2s;
+}
+
+button:hover{
+opacity:.85;
+}
+
+.remove{
+background:#444;
+}
+
+.move{
+background:#333;
+}
+
+textarea{
+width:100%;
+height:320px;
+background:#0f0f0f;
+border:1px solid var(--border);
+border-radius:var(--radius);
+color:#7cffc4;
+padding:20px;
+font-family:monospace;
+margin-top:20px;
+resize:none;
+}
+
+.actions{
+margin-bottom:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Photoshoot Generator</h1>
+
+<div class="card">
+
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Status</th>
+<th>Date</th>
+<th>Link</th>
+<th></th>
+</tr>
+</thead>
+
+<tbody id="rows"></tbody>
+
+</table>
+
+<div class="actions">
+<button onclick="addRow()">Add Shoot</button>
+<button onclick="generate()">Generate Code</button>
+<button onclick="copyCode()">Copy</button>
+</div>
+
+<textarea id="output" readonly></textarea>
+
+</div>
+</div>
+
+<script>
+
+const statuses = [
+"Not Shot",
+"Awaiting Edits",
+"Editing",
+"Completed"
+]
+
+function addRow(){
+
+const row = document.createElement("tr")
+
+row.innerHTML = `
+<td><input class="name" placeholder="Shoot name"></td>
+
+<td>
+<select class="status">
+${statuses.map(s=>`<option>${s}</option>`).join("")}
+</select>
+</td>
+
+<td><input class="date" placeholder="Mar 13, 2026"></td>
+
+<td><input class="link" placeholder="https://"></td>
+
+<td>
+<button class="move" onclick="moveUp(this)">↑</button>
+<button class="move" onclick="moveDown(this)">↓</button>
+<button class="remove" onclick="this.closest('tr').remove()">X</button>
+</td>
+`
+
+document.getElementById("rows").appendChild(row)
+
+}
+
+function moveUp(button){
+
+const row = button.closest("tr")
+const prev = row.previousElementSibling
+
+if(prev){
+row.parentNode.insertBefore(row, prev)
+}
+
+}
+
+function moveDown(button){
+
+const row = button.closest("tr")
+const next = row.nextElementSibling
+
+if(next){
+row.parentNode.insertBefore(next, row)
+}
+
+}
+
+function generate(){
+
+const rows = document.querySelectorAll("#rows tr")
+
+let shoots=[]
+
+rows.forEach(row=>{
+
+const name=row.querySelector(".name").value
+const status=row.querySelector(".status").value
+const date=row.querySelector(".date").value
+const link=row.querySelector(".link").value
+
+if(!name) return
+
+let obj=`{ name: "${name}", status: "${status}"`
+
+if(date) obj+=`, date: "${date}"`
+if(link) obj+=`, link: "${link}"`
+
+obj+=" }"
+
+shoots.push(obj)
+
+})
+
+const code=`// =============================================
+ // Edit this file to update photoshoot statuses!
+ // =============================================
+
+export type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";
+
+export interface Photoshoot {
+  name: string;
+  status: ShootStatus;
+  date?: string;
+  link?: string;
+}
+
+const photoshoots: Photoshoot[] = [
+  ${shoots.join(",\n  ")}
+];
+
+export default photoshoots;
+`
+
+document.getElementById("output").value=code
+
+}
+
+function copyCode(){
+
+const output=document.getElementById("output")
+
+output.select()
+document.execCommand("copy")
+
+alert("Copied to clipboard")
+
+}
+
+addRow()
+
+</script>
+
+</body>
+</html>
