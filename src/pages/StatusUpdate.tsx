@@ -56,6 +56,12 @@ export default function StatusUpdate() {
     setRows(updated);
   }
 
+  function deleteRow(index: number) {
+    const updated = [...rows];
+    updated.splice(index, 1);
+    setRows(updated);
+  }
+
   function generateCode() {
     const output = `export type ShootStatus = "Not Shot" | "Editing" | "Completed";
 
@@ -132,7 +138,7 @@ ${rows
 
       <div className="space-y-2">
         {rows.map((row, i) => (
-          <div key={i} className="grid grid-cols-6 gap-2 items-center">
+          <div key={i} className="grid grid-cols-7 gap-2 items-center">
             <input
               value={row.name}
               onChange={(e) => updateRow(i, "name", e.target.value)}
@@ -170,6 +176,9 @@ ${rows
               </button>
               <button onClick={() => moveDown(i)} className="px-2 border rounded">
                 ↓
+              </button>
+              <button onClick={() => deleteRow(i)} className="px-2 border rounded text-red-500">
+                ✕
               </button>
             </div>
           </div>
