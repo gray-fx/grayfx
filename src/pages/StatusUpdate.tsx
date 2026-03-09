@@ -45,16 +45,32 @@ setRows(updated);
 
 const moveUp = (index: number) => {
 if (index === 0) return;
+
+```
 const updated = [...rows];
-[updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+[updated[index - 1], updated[index]] = [
+  updated[index],
+  updated[index - 1],
+];
+
 setRows(updated);
+```
+
 };
 
 const moveDown = (index: number) => {
 if (index === rows.length - 1) return;
+
+```
 const updated = [...rows];
-[updated[index + 1], updated[index]] = [updated[index], updated[index + 1]];
+[updated[index + 1], updated[index]] = [
+  updated[index],
+  updated[index + 1],
+];
+
 setRows(updated);
+```
+
 };
 
 const generateCode = () => {
@@ -103,7 +119,8 @@ if (!matches) return;
   const newRows = matches.map((obj) => {
     const name = obj.match(/name:\s*"([^"]+)"/)?.[1] || "";
     const status =
-      (obj.match(/status:\s*"([^"]+)"/)?.[1] as ShootStatus) || "Not Shot";
+      (obj.match(/status:\s*"([^"]+)"/)?.[1] as ShootStatus) ||
+      "Not Shot";
     const date = obj.match(/date:\s*"([^"]+)"/)?.[1] || "";
     const link = obj.match(/link:\s*"([^"]+)"/)?.[1] || "";
 
@@ -132,13 +149,9 @@ if (!matches) return;
 
 };
 
-return ( <div className="max-w-6xl mx-auto p-8 space-y-8">
+return ( <div className="max-w-6xl mx-auto p-8 space-y-8"> <h1 className="text-3xl font-bold">Status Update Tool</h1>
 
 ```
-  <h1 className="text-3xl font-bold">Status Update Tool</h1>
-
-  {/* IMPORT */}
-
   <div>
     <p className="text-sm mb-2">Import Existing Source Code</p>
 
@@ -157,13 +170,9 @@ return ( <div className="max-w-6xl mx-auto p-8 space-y-8">
     </button>
   </div>
 
-  {/* TABLE */}
-
   <div className="space-y-2">
-
     {rows.map((row, i) => (
       <div key={i} className="grid grid-cols-6 gap-2 items-center">
-
         <input
           value={row.name}
           onChange={(e) => updateRow(i, "name", e.target.value)}
@@ -212,14 +221,11 @@ return ( <div className="max-w-6xl mx-auto p-8 space-y-8">
             ↓
           </button>
         </div>
-
       </div>
     ))}
-
   </div>
 
   <div className="flex gap-4">
-
     <button
       onClick={addRow}
       className="px-4 py-2 border border-primary rounded"
@@ -233,14 +239,10 @@ return ( <div className="max-w-6xl mx-auto p-8 space-y-8">
     >
       Generate Code
     </button>
-
   </div>
-
-  {/* OUTPUT */}
 
   {generated && (
     <div className="space-y-2">
-
       <p className="text-sm">Generated Output</p>
 
       <textarea
@@ -255,10 +257,8 @@ return ( <div className="max-w-6xl mx-auto p-8 space-y-8">
       >
         Copy
       </button>
-
     </div>
   )}
-
 </div>
 ```
 
