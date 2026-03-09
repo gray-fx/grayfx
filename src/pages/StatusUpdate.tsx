@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-type ShootStatus = "Not Shot" | "Editing" | "Completed";
+type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";
 
 type Row = {
   name: string;
@@ -63,30 +63,43 @@ export default function StatusUpdate() {
   }
 
   function generateCode() {
-    const output = `export type ShootStatus = "Not Shot" | "Editing" | "Completed";
+    const outputLines: string[] = [];
+    outputLines.push(`export type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";`);
+    outputLines.push("");
+    outputLines.push("export interface Photoshoot {");
+    outputLines.push("  name: string;");
+    outputLines.push("  status: ShootStatus;");
+    outputLines.push("  date?: string;");
+    outputLines.push("  link?: string;");
+    outputLines.push("}");
+    outputLines.push("");
+    outputLines.push("export const photoshoots: Photoshoot[] = [");
 
-export interface Photoshoot {
-  name: string;
-  status: ShootStatus;
-  date?: string;
-  link?: string;
-}
+    rows.forEach((row) => {
+      const date = formatDate(row.rawDate);
+      const objLines = [
+        "  {",
+        `    name: "${row.name}",`,
+        `    status: "${row.status}",`,
+      ];
+      if (date) objLines.push(`    date: "${date}",`);
+      if (row.link) objLines.push(`    link: "${row.link}",`);
+      // Remove trailing comma on last property
+      objLines[objLines.length - 1] = objLines[objLines.length - 1].replace(/,$/, "");
+      objLines.push("  },");
+      outputLines.push(...objLines);
+    });
 
-export const photoshoots: Photoshoot[] = [
-${rows
-  .map((row) => {
-    const date = formatDate(row.rawDate);
-    return `  {
-    name: "${row.name}",
-    status: "${row.status}",
-    date: "${date}"${row.link ? `,
-    link: "${row.link}"` : ""}
-  }`;
-  })
-  .join(",\n")}
-];`;
+    // Remove trailing comma on last array item
+    if (outputLines[outputLines.length - 1].trim() === "},") {
+      outputLines[outputLines.length - 1] = "  }";
+    }
 
-    setGenerated(output);
+    outputLines.push("];");
+    outputLines.push("");
+    outputLines.push("export default photoshoots;");
+
+    setGenerated(outputLines.join("\n"));
   }
 
   function copyOutput() {
@@ -152,6 +165,7 @@ ${rows
               className="bg-black/60 border border-border px-2 py-1 rounded"
             >
               <option>Not Shot</option>
+              <option>Awaiting Edits</option>
               <option>Editing</option>
               <option>Completed</option>
             </select>
