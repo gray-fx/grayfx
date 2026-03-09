@@ -3,208 +3,201 @@ import { useState } from "react";
 type ShootStatus = "Not Shot" | "Editing" | "Completed";
 
 type Row = {
-name: string;
-status: ShootStatus;
-rawDate?: string;
-link?: string;
+  name: string;
+  status: ShootStatus;
+  rawDate?: string;
+  link?: string;
 };
 
 function formatDate(value?: string) {
-if (!value) return "";
-const date = new Date(value);
-return date.toLocaleDateString("en-US", {
-month: "short",
-day: "numeric",
-year: "numeric",
-});
+  if (!value) return "";
+  const date = new Date(value);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function StatusUpdate() {
-const [rows, setRows] = useState<Row[]>([]);
-const [importText, setImportText] = useState("");
-const [generated, setGenerated] = useState("");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [importText, setImportText] = useState("");
+  const [generated, setGenerated] = useState("");
 
-function addRow() {
-setRows([
-...rows,
-{
-name: "",
-status: "Not Shot",
-rawDate: "",
-link: "",
-},
-]);
-}
+  function addRow() {
+    setRows([
+      ...rows,
+      {
+        name: "",
+        status: "Not Shot",
+        rawDate: "",
+        link: "",
+      },
+    ]);
+  }
 
-function updateRow(index: number, field: keyof Row, value: any) {
-const updated = [...rows];
-updated[index][field] = value;
-setRows(updated);
-}
+  function updateRow(index: number, field: keyof Row, value: any) {
+    const updated = [...rows];
+    updated[index][field] = value;
+    setRows(updated);
+  }
 
-function moveUp(index: number) {
-if (index === 0) return;
-const updated = [...rows];
-[updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
-setRows(updated);
-}
+  function moveUp(index: number) {
+    if (index === 0) return;
+    const updated = [...rows];
+    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+    setRows(updated);
+  }
 
-function moveDown(index: number) {
-if (index === rows.length - 1) return;
-const updated = [...rows];
-[updated[index + 1], updated[index]] = [updated[index], updated[index + 1]];
-setRows(updated);
-}
+  function moveDown(index: number) {
+    if (index === rows.length - 1) return;
+    const updated = [...rows];
+    [updated[index + 1], updated[index]] = [updated[index], updated[index + 1]];
+    setRows(updated);
+  }
 
-function generateCode() {
-const output = `export type ShootStatus = "Not Shot" | "Editing" | "Completed";
+  function generateCode() {
+    const output = `export type ShootStatus = "Not Shot" | "Editing" | "Completed";
 
 export interface Photoshoot {
-name: string;
-status: ShootStatus;
-date?: string;
-link?: string;
+  name: string;
+  status: ShootStatus;
+  date?: string;
+  link?: string;
 }
 
 export const photoshoots: Photoshoot[] = [
 ${rows
-.map((row) => {
-const date = formatDate(row.rawDate);
-return ` {
+  .map((row) => {
+    const date = formatDate(row.rawDate);
+    return `  {
     name: "${row.name}",
     status: "${row.status}",
-    date: "${date}"${row.link ?`,
-link: "${row.link}"` : ""}
+    date: "${date}"${row.link ? `,
+    link: "${row.link}"` : ""}
   }`;
-})
-.join(",\n")}
+  })
+  .join(",\n")}
 ];`;
 
-```
-setGenerated(output);
-```
+    setGenerated(output);
+  }
 
-}
+  function copyOutput() {
+    navigator.clipboard.writeText(generated);
+  }
 
-function copyOutput() {
-navigator.clipboard.writeText(generated);
-}
+  function importCode() {
+    try {
+      const matches = importText.match(/\{[^}]+\}/g);
+      if (!matches) return;
 
-function importCode() {
-try {
-const matches = importText.match(/{[^}]+}/g);
-if (!matches) return;
+      const newRows = matches.map((obj) => {
+        const name = obj.match(/name:\s*"([^"]+)"/)?.[1] || "";
+        const status = (obj.match(/status:\s*"([^"]+)"/)?.[1] as ShootStatus) || "Not Shot";
+        const date = obj.match(/date:\s*"([^"]+)"/)?.[1] || "";
+        const link = obj.match(/link:\s*"([^"]+)"/)?.[1] || "";
 
-```
-  const newRows = matches.map((obj) => {
-    const name = obj.match(/name:\s*"([^"]+)"/)?.[1] || "";
-    const status = (obj.match(/status:\s*"([^"]+)"/)?.[1] as ShootStatus) || "Not Shot";
-    const date = obj.match(/date:\s*"([^"]+)"/)?.[1] || "";
-    const link = obj.match(/link:\s*"([^"]+)"/)?.[1] || "";
+        let rawDate = "";
+        if (date) {
+          const parsed = new Date(date);
+          if (!isNaN(parsed.getTime())) rawDate = parsed.toISOString().split("T")[0];
+        }
 
-    let rawDate = "";
-    if (date) {
-      const parsed = new Date(date);
-      if (!isNaN(parsed.getTime())) rawDate = parsed.toISOString().split("T")[0];
+        return { name, status, rawDate, link };
+      });
+
+      setRows(newRows);
+    } catch (e) {
+      console.error("Import failed", e);
     }
+  }
 
-    return { name, status, rawDate, link };
-  });
+  return (
+    <div className="max-w-6xl mx-auto p-8 space-y-8">
+      <h1 className="text-3xl font-bold">Status Update Tool</h1>
 
-  setRows(newRows);
-} catch (e) {
-  console.error("Import failed", e);
-}
-```
-
-}
-
-return ( <div className="max-w-6xl mx-auto p-8 space-y-8"> <h1 className="text-3xl font-bold">Status Update Tool</h1>
-
-```
-  <div>
-    <p className="text-sm mb-2">Import Existing Source Code</p>
-    <textarea
-      value={importText}
-      onChange={(e) => setImportText(e.target.value)}
-      placeholder="Paste photoshoots.ts here..."
-      className="w-full h-40 bg-black/60 border border-border p-3 rounded font-mono text-sm"
-    />
-    <button onClick={importCode} className="mt-2 px-4 py-2 border border-primary rounded">
-      Import
-    </button>
-  </div>
-
-  <div className="space-y-2">
-    {rows.map((row, i) => (
-      <div key={i} className="grid grid-cols-6 gap-2 items-center">
-        <input
-          value={row.name}
-          onChange={(e) => updateRow(i, "name", e.target.value)}
-          placeholder="Name"
-          className="bg-black/60 border border-border px-2 py-1 rounded"
+      <div>
+        <p className="text-sm mb-2">Import Existing Source Code</p>
+        <textarea
+          value={importText}
+          onChange={(e) => setImportText(e.target.value)}
+          placeholder="Paste photoshoots.ts here..."
+          className="w-full h-40 bg-black/60 border border-border p-3 rounded font-mono text-sm"
         />
+        <button onClick={importCode} className="mt-2 px-4 py-2 border border-primary rounded">
+          Import
+        </button>
+      </div>
 
-        <select
-          value={row.status}
-          onChange={(e) => updateRow(i, "status", e.target.value as ShootStatus)}
-          className="bg-black/60 border border-border px-2 py-1 rounded"
-        >
-          <option>Not Shot</option>
-          <option>Editing</option>
-          <option>Completed</option>
-        </select>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="grid grid-cols-6 gap-2 items-center">
+            <input
+              value={row.name}
+              onChange={(e) => updateRow(i, "name", e.target.value)}
+              placeholder="Name"
+              className="bg-black/60 border border-border px-2 py-1 rounded"
+            />
 
-        <input
-          type="date"
-          value={row.rawDate || ""}
-          onChange={(e) => updateRow(i, "rawDate", e.target.value)}
-          className="bg-black/60 border border-border px-2 py-1 rounded"
-        />
+            <select
+              value={row.status}
+              onChange={(e) => updateRow(i, "status", e.target.value as ShootStatus)}
+              className="bg-black/60 border border-border px-2 py-1 rounded"
+            >
+              <option>Not Shot</option>
+              <option>Editing</option>
+              <option>Completed</option>
+            </select>
 
-        <input
-          value={row.link || ""}
-          onChange={(e) => updateRow(i, "link", e.target.value)}
-          placeholder="Gallery Link"
-          className="bg-black/60 border border-border px-2 py-1 rounded"
-        />
+            <input
+              type="date"
+              value={row.rawDate || ""}
+              onChange={(e) => updateRow(i, "rawDate", e.target.value)}
+              className="bg-black/60 border border-border px-2 py-1 rounded"
+            />
 
-        <div className="flex gap-2">
-          <button onClick={() => moveUp(i)} className="px-2 border rounded">
-            ↑
-          </button>
-          <button onClick={() => moveDown(i)} className="px-2 border rounded">
-            ↓
+            <input
+              value={row.link || ""}
+              onChange={(e) => updateRow(i, "link", e.target.value)}
+              placeholder="Gallery Link"
+              className="bg-black/60 border border-border px-2 py-1 rounded"
+            />
+
+            <div className="flex gap-2">
+              <button onClick={() => moveUp(i)} className="px-2 border rounded">
+                ↑
+              </button>
+              <button onClick={() => moveDown(i)} className="px-2 border rounded">
+                ↓
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-4">
+        <button onClick={addRow} className="px-4 py-2 border border-primary rounded">
+          Add Row
+        </button>
+        <button onClick={generateCode} className="px-4 py-2 border border-green-500 rounded">
+          Generate Code
+        </button>
+      </div>
+
+      {generated && (
+        <div className="space-y-2">
+          <p className="text-sm">Generated Output</p>
+          <textarea
+            value={generated}
+            readOnly
+            className="w-full h-64 bg-black/70 border border-border p-3 rounded font-mono text-sm"
+          />
+          <button onClick={copyOutput} className="px-4 py-2 border border-primary rounded">
+            Copy
           </button>
         </div>
-      </div>
-    ))}
-  </div>
-
-  <div className="flex gap-4">
-    <button onClick={addRow} className="px-4 py-2 border border-primary rounded">
-      Add Row
-    </button>
-    <button onClick={generateCode} className="px-4 py-2 border border-green-500 rounded">
-      Generate Code
-    </button>
-  </div>
-
-  {generated && (
-    <div className="space-y-2">
-      <p className="text-sm">Generated Output</p>
-      <textarea
-        value={generated}
-        readOnly
-        className="w-full h-64 bg-black/70 border border-border p-3 rounded font-mono text-sm"
-      />
-      <button onClick={copyOutput} className="px-4 py-2 border border-primary rounded">
-        Copy
-      </button>
+      )}
     </div>
-  )}
-</div>
-```
-
-);
+  );
 }
