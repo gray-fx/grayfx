@@ -9,7 +9,7 @@ rawDate?: string;
 link?: string;
 };
 
-const formatDate = (value?: string) => {
+function formatDate(value?: string) {
 if (!value) return "";
 const date = new Date(value);
 
@@ -18,14 +18,14 @@ month: "short",
 day: "numeric",
 year: "numeric",
 });
-};
+}
 
-const StatusUpdate = () => {
+export default function StatusUpdate() {
 const [rows, setRows] = useState<Row[]>([]);
 const [importText, setImportText] = useState("");
 const [generated, setGenerated] = useState("");
 
-const addRow = () => {
+function addRow() {
 setRows([
 ...rows,
 {
@@ -35,45 +35,43 @@ rawDate: "",
 link: "",
 },
 ]);
-};
+}
 
-const updateRow = (index: number, field: keyof Row, value: any) => {
+function updateRow(index: number, field: keyof Row, value: any) {
 const updated = [...rows];
 updated[index][field] = value;
 setRows(updated);
-};
+}
 
-const moveUp = (index: number) => {
+function moveUp(index: number) {
 if (index === 0) return;
 
 ```
 const updated = [...rows];
-[updated[index - 1], updated[index]] = [
-  updated[index],
-  updated[index - 1],
-];
+const temp = updated[index - 1];
+updated[index - 1] = updated[index];
+updated[index] = temp;
 
 setRows(updated);
 ```
 
-};
+}
 
-const moveDown = (index: number) => {
+function moveDown(index: number) {
 if (index === rows.length - 1) return;
 
 ```
 const updated = [...rows];
-[updated[index + 1], updated[index]] = [
-  updated[index],
-  updated[index + 1],
-];
+const temp = updated[index + 1];
+updated[index + 1] = updated[index];
+updated[index] = temp;
 
 setRows(updated);
 ```
 
-};
+}
 
-const generateCode = () => {
+function generateCode() {
 const output = `export type ShootStatus = "Not Shot" | "Editing" | "Completed";
 
 export type Photoshoot = {
@@ -92,7 +90,8 @@ const date = formatDate(row.rawDate);
 return `  {
 name: "${row.name}",
 status: "${row.status}",
-date: "${date}"${row.link ? `,\n    link: "${row.link}"` : ""}
+date: "${date}"${row.link ? `,
+link: "${row.link}"` : ""}
 ```
 
 }`;
@@ -104,13 +103,13 @@ date: "${date}"${row.link ? `,\n    link: "${row.link}"` : ""}
 setGenerated(output);
 ```
 
-};
+}
 
-const copyOutput = () => {
+function copyOutput() {
 navigator.clipboard.writeText(generated);
-};
+}
 
-const importCode = () => {
+function importCode() {
 try {
 const matches = importText.match(/{[^}]+}/g);
 if (!matches) return;
@@ -142,12 +141,12 @@ if (!matches) return;
   });
 
   setRows(newRows);
-} catch (err) {
+} catch (e) {
   console.error("Import failed");
 }
 ```
 
-};
+}
 
 return ( <div className="max-w-6xl mx-auto p-8 space-y-8"> <h1 className="text-3xl font-bold">Status Update Tool</h1>
 
@@ -207,17 +206,11 @@ return ( <div className="max-w-6xl mx-auto p-8 space-y-8"> <h1 className="text-3
         />
 
         <div className="flex gap-2">
-          <button
-            onClick={() => moveUp(i)}
-            className="px-2 border rounded"
-          >
+          <button onClick={() => moveUp(i)} className="px-2 border rounded">
             ↑
           </button>
 
-          <button
-            onClick={() => moveDown(i)}
-            className="px-2 border rounded"
-          >
+          <button onClick={() => moveDown(i)} className="px-2 border rounded">
             ↓
           </button>
         </div>
@@ -263,6 +256,4 @@ return ( <div className="max-w-6xl mx-auto p-8 space-y-8"> <h1 className="text-3
 ```
 
 );
-};
-
-export default StatusUpdate;
+}
