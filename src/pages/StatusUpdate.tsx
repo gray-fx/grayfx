@@ -1,305 +1,268 @@
 import { useState } from "react";
-import { ArrowUp, ArrowDown, Trash2, Copy, Plus, Upload } from "lucide-react";
 
-type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";
+type ShootStatus = "Not Shot" | "Editing" | "Completed";
 
-interface Row {
-  name: string;
-  status: ShootStatus;
-  date: string;
-  link: string;
-}
+type Row = {
+name: string;
+status: ShootStatus;
+rawDate?: string;
+link?: string;
+};
 
-const statuses: ShootStatus[] = [
-  "Not Shot",
-  "Awaiting Edits",
-  "Editing",
-  "Completed",
-];
+const formatDate = (value?: string) => {
+if (!value) return "";
+const date = new Date(value);
+
+return date.toLocaleDateString("en-US", {
+month: "short",
+day: "numeric",
+year: "numeric",
+});
+};
 
 const StatusUpdate = () => {
+const [rows, setRows] = useState<Row[]>([]);
+const [importText, setImportText] = useState("");
+const [generated, setGenerated] = useState("");
 
-  const [rows, setRows] = useState<Row[]>([
-    { name: "", status: "Not Shot", date: "", link: "" },
-  ]);
+const addRow = () => {
+setRows([
+...rows,
+{
+name: "",
+status: "Not Shot",
+rawDate: "",
+link: "",
+},
+]);
+};
 
-  const [output, setOutput] = useState("");
-  const [importText, setImportText] = useState("");
+const updateRow = (index: number, field: keyof Row, value: any) => {
+const updated = [...rows];
+updated[index][field] = value;
+setRows(updated);
+};
 
-  const addRow = () => {
-    setRows([...rows, { name: "", status: "Not Shot", date: "", link: "" }]);
-  };
+const moveUp = (index: number) => {
+if (index === 0) return;
+const updated = [...rows];
+[updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+setRows(updated);
+};
 
-  const removeRow = (i: number) => {
-    setRows(rows.filter((_, index) => index !== i));
-  };
+const moveDown = (index: number) => {
+if (index === rows.length - 1) return;
+const updated = [...rows];
+[updated[index + 1], updated[index]] = [updated[index], updated[index + 1]];
+setRows(updated);
+};
 
-  const moveUp = (i: number) => {
-    if (i === 0) return;
+const generateCode = () => {
+const output = `export type ShootStatus = "Not Shot" | "Editing" | "Completed";
 
-    const newRows = [...rows];
-    [newRows[i - 1], newRows[i]] = [newRows[i], newRows[i - 1]];
-    setRows(newRows);
-  };
+export type Photoshoot = {
+name: string;
+status: ShootStatus;
+date: string;
+link?: string;
+};
 
-  const moveDown = (i: number) => {
-    if (i === rows.length - 1) return;
+export const photoshoots: Photoshoot[] = [
+${rows
+.map((row) => {
+const date = formatDate(row.rawDate);
 
-    const newRows = [...rows];
-    [newRows[i + 1], newRows[i]] = [newRows[i], newRows[i + 1]];
-    setRows(newRows);
-  };
+```
+return `  {
+name: "${row.name}",
+status: "${row.status}",
+date: "${date}"${row.link ? `,\n    link: "${row.link}"` : ""}
+```
 
-  const update = (i: number, key: keyof Row, value: string) => {
-    const newRows = [...rows];
-    newRows[i] = { ...newRows[i], [key]: value };
-    setRows(newRows);
-  };
+}`;
+  })
+  .join(",\n")}
+];`;
 
-  const generate = () => {
+```
+setGenerated(output);
+```
 
-    const shoots = rows
-      .filter((r) => r.name)
-      .map((r) => {
+};
 
-        let obj = `{ name: "${r.name}", status: "${r.status}"`;
+const copyOutput = () => {
+navigator.clipboard.writeText(generated);
+};
 
-        if (r.date) obj += `, date: "${r.date}"`;
-        if (r.link) obj += `, link: "${r.link}"`;
+const importCode = () => {
+try {
+const matches = importText.match(/{[^}]+}/g);
+if (!matches) return;
 
-        obj += " }";
+```
+  const newRows = matches.map((obj) => {
+    const name = obj.match(/name:\s*"([^"]+)"/)?.[1] || "";
+    const status =
+      (obj.match(/status:\s*"([^"]+)"/)?.[1] as ShootStatus) || "Not Shot";
+    const date = obj.match(/date:\s*"([^"]+)"/)?.[1] || "";
+    const link = obj.match(/link:\s*"([^"]+)"/)?.[1] || "";
 
-        return obj;
+    let rawDate = "";
 
-      });
-
-    const code = `// =============================================
- // Edit this file to update photoshoot statuses!
- // =============================================
-
-export type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";
-
-export interface Photoshoot {
-  name: string;
-  status: ShootStatus;
-  date?: string;
-  link?: string;
-}
-
-const photoshoots: Photoshoot[] = [
-  ${shoots.join(",\n  ")}
-];
-
-export default photoshoots;
-`;
-
-    setOutput(code);
-
-  };
-
-  const copy = () => {
-    navigator.clipboard.writeText(output);
-  };
-
-  const importCode = () => {
-
-    try {
-
-      const matches = importText.match(/\{[^}]+\}/g);
-
-      if (!matches) return;
-
-      const newRows = matches.map((obj) => {
-
-        const name = obj.match(/name:\s*"([^"]+)"/)?.[1] || "";
-        const status = obj.match(/status:\s*"([^"]+)"/)?.[1] || "Not Shot";
-        const date = obj.match(/date:\s*"([^"]+)"/)?.[1] || "";
-        const link = obj.match(/link:\s*"([^"]+)"/)?.[1] || "";
-
-        return {
-          name,
-          status: status as ShootStatus,
-          date,
-          link,
-        };
-
-      });
-
-      setRows(newRows);
-
-    } catch {
-      console.error("Import failed");
+    if (date) {
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) {
+        rawDate = parsed.toISOString().split("T")[0];
+      }
     }
 
-  };
+    return {
+      name,
+      status,
+      rawDate,
+      link,
+    };
+  });
 
-  return (
-    <div className="min-h-screen bg-background px-6 py-24">
+  setRows(newRows);
+} catch (err) {
+  console.error("Import failed");
+}
+```
 
-      <div className="mx-auto max-w-5xl">
+};
 
-        <h1 className="font-display text-4xl font-bold text-center text-foreground">
-          Photoshoot Status Editor
-        </h1>
+return ( <div className="max-w-6xl mx-auto p-8 space-y-8">
 
-        {/* IMPORT BOX */}
+```
+  <h1 className="text-3xl font-bold">Status Update Tool</h1>
 
-        <div className="mt-12">
+  {/* IMPORT */}
 
-          <p className="text-sm text-muted-foreground mb-2">
-            Import Existing Photoshoots
-          </p>
+  <div>
+    <p className="text-sm mb-2">Import Existing Source Code</p>
 
-          <textarea
-            value={importText}
-            onChange={(e) => setImportText(e.target.value)}
-            placeholder="Paste your current photoshoots.ts file here..."
-            className="w-full h-40 bg-black/60 border border-border p-4 font-mono text-green-400 rounded"
-          />
+    <textarea
+      value={importText}
+      onChange={(e) => setImportText(e.target.value)}
+      placeholder="Paste photoshoots.ts here..."
+      className="w-full h-40 bg-black/60 border border-border p-3 rounded font-mono text-sm"
+    />
 
+    <button
+      onClick={importCode}
+      className="mt-2 px-4 py-2 border border-primary rounded"
+    >
+      Import
+    </button>
+  </div>
+
+  {/* TABLE */}
+
+  <div className="space-y-2">
+
+    {rows.map((row, i) => (
+      <div key={i} className="grid grid-cols-6 gap-2 items-center">
+
+        <input
+          value={row.name}
+          onChange={(e) => updateRow(i, "name", e.target.value)}
+          placeholder="Name"
+          className="bg-black/60 border border-border px-2 py-1 rounded"
+        />
+
+        <select
+          value={row.status}
+          onChange={(e) =>
+            updateRow(i, "status", e.target.value as ShootStatus)
+          }
+          className="bg-black/60 border border-border px-2 py-1 rounded"
+        >
+          <option>Not Shot</option>
+          <option>Editing</option>
+          <option>Completed</option>
+        </select>
+
+        <input
+          type="date"
+          value={row.rawDate || ""}
+          onChange={(e) => updateRow(i, "rawDate", e.target.value)}
+          className="bg-black/60 border border-border px-2 py-1 rounded"
+        />
+
+        <input
+          value={row.link || ""}
+          onChange={(e) => updateRow(i, "link", e.target.value)}
+          placeholder="Gallery Link"
+          className="bg-black/60 border border-border px-2 py-1 rounded"
+        />
+
+        <div className="flex gap-2">
           <button
-            onClick={importCode}
-            className="mt-3 flex items-center gap-2 border border-primary px-4 py-2 text-primary hover:bg-primary hover:text-primary-foreground transition"
+            onClick={() => moveUp(i)}
+            className="px-2 border rounded"
           >
-            <Upload size={16} /> Import
+            ↑
           </button>
 
-        </div>
-
-        {/* TABLE */}
-
-        <div className="mt-12 rounded-lg border border-border bg-card p-6">
-
-          <table className="w-full text-sm">
-
-            <thead className="text-muted-foreground uppercase tracking-wider">
-              <tr>
-                <th className="text-left pb-3">Name</th>
-                <th className="text-left pb-3">Status</th>
-                <th className="text-left pb-3">Date</th>
-                <th className="text-left pb-3">Link</th>
-                <th></th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {rows.map((row, i) => (
-
-                <tr key={i} className="border-t border-border">
-
-                  <td className="py-2">
-                    <input
-                      value={row.name}
-                      onChange={(e) => update(i, "name", e.target.value)}
-                      className="w-full bg-secondary/50 border border-border rounded px-2 py-1"
-                    />
-                  </td>
-
-                  <td>
-                    <select
-                      value={row.status}
-                      onChange={(e) =>
-                        update(i, "status", e.target.value as ShootStatus)
-                      }
-                      className="bg-secondary/50 border border-border rounded px-2 py-1"
-                    >
-                      {statuses.map((s) => (
-                        <option key={s}>{s}</option>
-                      ))}
-                    </select>
-                  </td>
-
-                  <td>
-                    <input
-                      value={row.date}
-                      onChange={(e) => update(i, "date", e.target.value)}
-                      className="bg-secondary/50 border border-border rounded px-2 py-1"
-                    />
-                  </td>
-
-                  <td>
-                    <input
-                      value={row.link}
-                      onChange={(e) => update(i, "link", e.target.value)}
-                      className="bg-secondary/50 border border-border rounded px-2 py-1 w-full"
-                    />
-                  </td>
-
-                  <td className="flex gap-2 py-2">
-
-                    <button
-                      onClick={() => moveUp(i)}
-                      className="text-muted-foreground hover:text-primary"
-                    >
-                      <ArrowUp size={16} />
-                    </button>
-
-                    <button
-                      onClick={() => moveDown(i)}
-                      className="text-muted-foreground hover:text-primary"
-                    >
-                      <ArrowDown size={16} />
-                    </button>
-
-                    <button
-                      onClick={() => removeRow(i)}
-                      className="text-muted-foreground hover:text-red-400"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-
-                  </td>
-
-                </tr>
-
-              ))}
-
-            </tbody>
-
-          </table>
-
-          {/* BUTTONS */}
-
-          <div className="flex gap-4 mt-6">
-
-            <button
-              onClick={addRow}
-              className="flex items-center gap-2 border border-primary px-4 py-2 text-primary hover:bg-primary hover:text-primary-foreground transition"
-            >
-              <Plus size={16} /> Add Shoot
-            </button>
-
-            <button
-              onClick={generate}
-              className="border border-primary px-4 py-2 text-primary hover:bg-primary hover:text-primary-foreground transition"
-            >
-              Generate Code
-            </button>
-
-            <button
-              onClick={copy}
-              className="flex items-center gap-2 border border-border px-4 py-2 hover:border-primary hover:text-primary transition"
-            >
-              <Copy size={16} /> Copy
-            </button>
-
-          </div>
-
-          {/* OUTPUT */}
-
-          <textarea
-            value={output}
-            readOnly
-            className="mt-6 w-full h-80 bg-black/60 border border-border p-4 font-mono text-green-400 rounded"
-          />
-
+          <button
+            onClick={() => moveDown(i)}
+            className="px-2 border rounded"
+          >
+            ↓
+          </button>
         </div>
 
       </div>
+    ))}
+
+  </div>
+
+  <div className="flex gap-4">
+
+    <button
+      onClick={addRow}
+      className="px-4 py-2 border border-primary rounded"
+    >
+      Add Row
+    </button>
+
+    <button
+      onClick={generateCode}
+      className="px-4 py-2 border border-green-500 rounded"
+    >
+      Generate Code
+    </button>
+
+  </div>
+
+  {/* OUTPUT */}
+
+  {generated && (
+    <div className="space-y-2">
+
+      <p className="text-sm">Generated Output</p>
+
+      <textarea
+        value={generated}
+        readOnly
+        className="w-full h-64 bg-black/70 border border-border p-3 rounded font-mono text-sm"
+      />
+
+      <button
+        onClick={copyOutput}
+        className="px-4 py-2 border border-primary rounded"
+      >
+        Copy
+      </button>
 
     </div>
-  );
+  )}
+
+</div>
+```
+
+);
 };
 
 export default StatusUpdate;
