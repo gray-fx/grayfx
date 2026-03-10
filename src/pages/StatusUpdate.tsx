@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";
+type ShootStatus = "Upcoming" | "Awaiting Edits" | "Editing" | "Completed";
 
 type Row = {
   name: string;
