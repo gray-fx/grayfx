@@ -29,7 +29,7 @@ export default function StatusUpdate() {
       ...rows,
       {
         name: "",
-        status: "Not Shot",
+        status: "Upcoming",
         rawDate: "",
         link: "",
       },
