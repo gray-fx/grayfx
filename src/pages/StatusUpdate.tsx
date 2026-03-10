@@ -113,7 +113,7 @@ export default function StatusUpdate() {
 
       const newRows = matches.map((obj) => {
         const name = obj.match(/name:\s*"([^"]+)"/)?.[1] || "";
-        const status = (obj.match(/status:\s*"([^"]+)"/)?.[1] as ShootStatus) || "Not Shot";
+        const status = (obj.match(/status:\s*"([^"]+)"/)?.[1] as ShootStatus) || "Upcoming";
         const date = obj.match(/date:\s*"([^"]+)"/)?.[1] || "";
         const link = obj.match(/link:\s*"([^"]+)"/)?.[1] || "";
 
