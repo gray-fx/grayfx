@@ -10,7 +10,7 @@ export interface Photoshoot {
 export const photoshoots: Photoshoot[] = [
   {
     name: "Saint Mark's Baseball",
-    status: "Not Shot",
+    status: "Upcoming",
     date: "Mar 13, 2026"
   },
   {
