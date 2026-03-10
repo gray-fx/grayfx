@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import photoshoots, { type ShootStatus } from "@/data/photoshoots";
 
 const statusConfig: Record<ShootStatus, { icon: typeof Circle; color: string; bg: string }> = {
-  "Not Shot": { icon: Circle, color: "text-muted-foreground", bg: "bg-muted" },
+  "Upcoming": { icon: Circle, color: "text-muted-foreground", bg: "bg-muted" },
   "Awaiting Edits": { icon: Clock, color: "text-yellow-400", bg: "bg-yellow-400/10" },
   "Editing": { icon: Pencil, color: "text-primary", bg: "bg-primary/10" },
   "Completed": { icon: CheckCircle2, color: "text-green-400", bg: "bg-green-400/10" },

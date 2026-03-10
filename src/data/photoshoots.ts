@@ -15,7 +15,7 @@ export const photoshoots: Photoshoot[] = [
   },
   {
     name: "Delaware Blue Coats",
-    status: "Not Shot",
+    status: "Upcoming",
     date: "Mar 12, 2026"
   },
   {

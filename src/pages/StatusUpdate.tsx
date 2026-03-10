@@ -164,7 +164,7 @@ export default function StatusUpdate() {
               onChange={(e) => updateRow(i, "status", e.target.value as ShootStatus)}
               className="bg-black/60 border border-border px-2 py-1 rounded"
             >
-              <option>Not Shot</option>
+              <option>Upcoming</option>
               <option>Awaiting Edits</option>
               <option>Editing</option>
               <option>Completed</option>
