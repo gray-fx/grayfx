@@ -64,7 +64,7 @@ export default function StatusUpdate() {
 
   function generateCode() {
     const outputLines: string[] = [];
-    outputLines.push(`export type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";`);
+    outputLines.push(`export type ShootStatus = "Upcoming" | "Awaiting Edits" | "Editing" | "Completed";`);
     outputLines.push("");
     outputLines.push("export interface Photoshoot {");
     outputLines.push("  name: string;");
