@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";
+type ShootStatus = "Upcoming" | "Awaiting Edits" | "Editing" | "Completed";
 
 type Row = {
   name: string;
@@ -29,7 +29,7 @@ export default function StatusUpdate() {
       ...rows,
       {
         name: "",
-        status: "Not Shot",
+        status: "Upcoming",
         rawDate: "",
         link: "",
       },
@@ -64,7 +64,7 @@ export default function StatusUpdate() {
 
   function generateCode() {
     const outputLines: string[] = [];
-    outputLines.push(`export type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";`);
+    outputLines.push(`export type ShootStatus = "Upcoming" | "Awaiting Edits" | "Editing" | "Completed";`);
     outputLines.push("");
     outputLines.push("export interface Photoshoot {");
     outputLines.push("  name: string;");
@@ -113,7 +113,7 @@ export default function StatusUpdate() {
 
       const newRows = matches.map((obj) => {
         const name = obj.match(/name:\s*"([^"]+)"/)?.[1] || "";
-        const status = (obj.match(/status:\s*"([^"]+)"/)?.[1] as ShootStatus) || "Not Shot";
+        const status = (obj.match(/status:\s*"([^"]+)"/)?.[1] as ShootStatus) || "Upcoming";
         const date = obj.match(/date:\s*"([^"]+)"/)?.[1] || "";
         const link = obj.match(/link:\s*"([^"]+)"/)?.[1] || "";
 
@@ -164,7 +164,7 @@ export default function StatusUpdate() {
               onChange={(e) => updateRow(i, "status", e.target.value as ShootStatus)}
               className="bg-black/60 border border-border px-2 py-1 rounded"
             >
-              <option>Not Shot</option>
+              <option>Upcoming</option>
               <option>Awaiting Edits</option>
               <option>Editing</option>
               <option>Completed</option>

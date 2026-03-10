@@ -1,4 +1,4 @@
-export type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";
+export type ShootStatus = "Upcoming" | "Awaiting Edits" | "Editing" | "Completed";
 
 export interface Photoshoot {
   name: string;
@@ -10,12 +10,12 @@ export interface Photoshoot {
 export const photoshoots: Photoshoot[] = [
   {
     name: "Saint Mark's Baseball",
-    status: "Not Shot",
+    status: "Upcoming",
     date: "Mar 13, 2026"
   },
   {
     name: "Delaware Blue Coats",
-    status: "Not Shot",
+    status: "Upcoming",
     date: "Mar 12, 2026"
   },
   {
