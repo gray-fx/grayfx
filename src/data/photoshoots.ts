@@ -1,4 +1,4 @@
-export type ShootStatus = "Not Shot" | "Awaiting Edits" | "Editing" | "Completed";
+export type ShootStatus = "Upcoming" | "Awaiting Edits" | "Editing" | "Completed";
 
 export interface Photoshoot {
   name: string;
