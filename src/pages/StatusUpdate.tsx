@@ -11,7 +11,8 @@ type Row = {
 
 function formatDate(value?: string) {
   if (!value) return "";
-  const date = new Date(value);
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
