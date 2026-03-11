@@ -22,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/status" element={<Status />} />
           <Route path="/statusupdate" element={<StatusUpdate />} />
+          <Route path="/unfollow" element={<UnfollowFinder />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
