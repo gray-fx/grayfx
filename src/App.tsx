@@ -25,6 +25,8 @@ const App = () => (
           <Route path="/status" element={<Status />} />
           <Route path="/statusupdate" element={<StatusUpdate />} />
           <Route path="/unfollow" element={<UnfollowFinder />} />
+          <Route path="/scoreboard-control" element={<ScoreboardControl />} />
+          <Route path="/scoreboard" element={<ScoreboardDisplay />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
