@@ -9,6 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Minus, Play, Pause, RotateCcw, ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+const SPORT_ACTIONS: Record<SportType, string[]> = {
+  football: ["Touchdown", "Field Goal", "Extra Point", "2PT Conversion", "Safety", "Interception", "Fumble", "Sack", "Tackle", "Pass Complete", "Rush", "Penalty", "Punt", "Kickoff"],
+  basketball: ["2PT Made", "3PT Made", "Free Throw", "Rebound", "Assist", "Steal", "Block", "Turnover", "Foul", "Tech Foul"],
+  baseball: ["Single", "Double", "Triple", "Home Run", "Walk", "Strikeout", "Ground Out", "Fly Out", "RBI", "Stolen Base", "Error", "Hit By Pitch"],
+  hockey: ["Goal", "Assist", "Shot", "Save", "Hit", "Blocked Shot", "Penalty", "Power Play Goal", "Faceoff Win"],
+  soccer: ["Goal", "Assist", "Shot", "Shot on Target", "Save", "Foul", "Yellow Card", "Red Card", "Corner", "Offside"],
+};
+
 const ScoreboardControl = () => {
   const { state, update } = useScoreboard(true);
   const config = SPORT_CONFIG[state.sport];
