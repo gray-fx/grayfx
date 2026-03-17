@@ -88,6 +88,7 @@ export function getDefaultState(sport: SportType = "football"): ScoreboardState 
     homeSOG: 0,
     awaySOG: 0,
     stoppage: "",
+    statLog: [],
   };
 }
 
