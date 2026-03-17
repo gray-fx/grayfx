@@ -1,10 +1,12 @@
-import { useScoreboard, SPORT_CONFIG, getDefaultState, type SportType } from "@/hooks/use-scoreboard";
+import { useState } from "react";
+import { useScoreboard, SPORT_CONFIG, getDefaultState, type SportType, type StatEntry } from "@/hooks/use-scoreboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Minus, Play, Pause, RotateCcw, ArrowLeft, ExternalLink } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Minus, Play, Pause, RotateCcw, ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const ScoreboardControl = () => {
