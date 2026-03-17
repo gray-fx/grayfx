@@ -1,15 +1,29 @@
-import { useScoreboard, SPORT_CONFIG, getDefaultState, type SportType } from "@/hooks/use-scoreboard";
+import { useState } from "react";
+import { useScoreboard, SPORT_CONFIG, getDefaultState, type SportType, type StatEntry } from "@/hooks/use-scoreboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Minus, Play, Pause, RotateCcw, ArrowLeft, ExternalLink } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Minus, Play, Pause, RotateCcw, ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
+
+const SPORT_ACTIONS: Record<SportType, string[]> = {
+  football: ["Touchdown", "Field Goal", "Extra Point", "2PT Conversion", "Safety", "Interception", "Fumble", "Sack", "Tackle", "Pass Complete", "Rush", "Penalty", "Punt", "Kickoff"],
+  basketball: ["2PT Made", "3PT Made", "Free Throw", "Rebound", "Assist", "Steal", "Block", "Turnover", "Foul", "Tech Foul"],
+  baseball: ["Single", "Double", "Triple", "Home Run", "Walk", "Strikeout", "Ground Out", "Fly Out", "RBI", "Stolen Base", "Error", "Hit By Pitch"],
+  hockey: ["Goal", "Assist", "Shot", "Save", "Hit", "Blocked Shot", "Penalty", "Power Play Goal", "Faceoff Win"],
+  soccer: ["Goal", "Assist", "Shot", "Shot on Target", "Save", "Foul", "Yellow Card", "Red Card", "Corner", "Offside"],
+};
 
 const ScoreboardControl = () => {
   const { state, update } = useScoreboard(true);
   const config = SPORT_CONFIG[state.sport];
+
+  const [statTeam, setStatTeam] = useState<"home" | "away">("home");
+  const [statPlayer, setStatPlayer] = useState("");
+  const [statAction, setStatAction] = useState("");
 
   const changeSport = (sport: SportType) => {
     const fresh = getDefaultState(sport);
@@ -17,6 +31,27 @@ const ScoreboardControl = () => {
   };
 
   const resetGame = () => update(getDefaultState(state.sport));
+
+  const addStat = () => {
+    if (!statPlayer.trim() || !statAction) return;
+    const entry: StatEntry = {
+      id: crypto.randomUUID(),
+      team: statTeam,
+      player: statPlayer.trim(),
+      action: statAction,
+      period: state.period,
+      clock: state.sport === "baseball" ? `${state.inningHalf === "top" ? "▲" : "▼"}${state.inning}` : state.clock,
+      timestamp: Date.now(),
+    };
+    update({ statLog: [...state.statLog, entry] });
+    setStatPlayer("");
+  };
+
+  const removeStat = (id: string) => {
+    update({ statLog: state.statLog.filter((s) => s.id !== id) });
+  };
+
+  const clearStats = () => update({ statLog: [] });
 
   const ScoreControl = ({ side, label }: { side: "home" | "away"; label: string }) => {
     const scoreKey = side === "home" ? "homeScore" : "awayScore";
@@ -308,6 +343,114 @@ const ScoreboardControl = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Stat Logger */}
+      <Card className="mb-4">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-display">Stat Logger</CardTitle>
+            {state.statLog.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearStats} className="text-destructive">
+                <Trash2 className="h-3 w-3 mr-1" /> Clear All
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-2 items-end">
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Team</span>
+              <Select value={statTeam} onValueChange={(v) => setStatTeam(v as "home" | "away")}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="home">{state.homeTeam}</SelectItem>
+                  <SelectItem value="away">{state.awayTeam}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Player</span>
+              <Input
+                value={statPlayer}
+                onChange={(e) => setStatPlayer(e.target.value)}
+                placeholder="#0 Name"
+                className="w-36"
+                onKeyDown={(e) => e.key === "Enter" && addStat()}
+              />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Action</span>
+              <Select value={statAction} onValueChange={setStatAction}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {SPORT_ACTIONS[state.sport].map((a) => (
+                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={addStat} disabled={!statPlayer.trim() || !statAction}>
+              <Plus className="h-4 w-4 mr-1" /> Log
+            </Button>
+          </div>
+
+          {/* Quick action buttons */}
+          <div className="flex flex-wrap gap-1">
+            {SPORT_ACTIONS[state.sport].slice(0, 6).map((a) => (
+              <Button
+                key={a}
+                size="sm"
+                variant={statAction === a ? "default" : "secondary"}
+                onClick={() => setStatAction(a)}
+              >
+                {a}
+              </Button>
+            ))}
+          </div>
+
+          <Separator />
+
+          {/* Stat Log Table */}
+          {state.statLog.length > 0 ? (
+            <div className="max-h-64 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">Time</TableHead>
+                    <TableHead>Team</TableHead>
+                    <TableHead>Player</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead className="w-10"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...state.statLog].reverse().map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{entry.clock}</TableCell>
+                      <TableCell className="text-xs font-semibold">
+                        {entry.team === "home" ? state.homeTeam : state.awayTeam}
+                      </TableCell>
+                      <TableCell className="text-sm">{entry.player}</TableCell>
+                      <TableCell className="text-sm font-medium">{entry.action}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeStat(entry.id)}>
+                          <Trash2 className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">No stats logged yet</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

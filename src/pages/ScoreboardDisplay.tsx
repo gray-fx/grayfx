@@ -178,6 +178,37 @@ const ScoreboardDisplay = () => {
             </div>
           )}
         </div>
+
+        {/* Live Stat Feed */}
+        {state.statLog.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 bg-card border border-border rounded-xl overflow-hidden shadow-lg"
+          >
+            <div className="bg-secondary px-6 py-2">
+              <span className="text-xs uppercase tracking-widest text-muted-foreground font-display">Live Stats</span>
+            </div>
+            <div className="max-h-48 overflow-y-auto">
+              {[...state.statLog].reverse().slice(0, 10).map((entry, i) => (
+                <motion.div
+                  key={entry.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="px-6 py-2 flex items-center gap-4 border-b border-border last:border-0"
+                >
+                  <span className="font-mono text-xs text-muted-foreground w-14 shrink-0">{entry.clock}</span>
+                  <span className="text-xs font-bold text-primary w-16 shrink-0 uppercase">
+                    {entry.team === "home" ? state.homeTeam : state.awayTeam}
+                  </span>
+                  <span className="text-sm text-foreground">{entry.player}</span>
+                  <span className="text-sm font-semibold text-foreground ml-auto">{entry.action}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );
