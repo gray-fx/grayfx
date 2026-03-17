@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Status from "./pages/Status";
 import StatusUpdate from "./pages/StatusUpdate";
 import UnfollowFinder from "./pages/UnfollowFinder";
+import ScoreboardControl from "./pages/ScoreboardControl";
+import ScoreboardDisplay from "./pages/ScoreboardDisplay";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
