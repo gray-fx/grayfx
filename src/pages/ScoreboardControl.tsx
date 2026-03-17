@@ -21,12 +21,37 @@ const ScoreboardControl = () => {
   const { state, update } = useScoreboard(true);
   const config = SPORT_CONFIG[state.sport];
 
+  const [statTeam, setStatTeam] = useState<"home" | "away">("home");
+  const [statPlayer, setStatPlayer] = useState("");
+  const [statAction, setStatAction] = useState("");
+
   const changeSport = (sport: SportType) => {
     const fresh = getDefaultState(sport);
     update(fresh);
   };
 
   const resetGame = () => update(getDefaultState(state.sport));
+
+  const addStat = () => {
+    if (!statPlayer.trim() || !statAction) return;
+    const entry: StatEntry = {
+      id: crypto.randomUUID(),
+      team: statTeam,
+      player: statPlayer.trim(),
+      action: statAction,
+      period: state.period,
+      clock: state.sport === "baseball" ? `${state.inningHalf === "top" ? "▲" : "▼"}${state.inning}` : state.clock,
+      timestamp: Date.now(),
+    };
+    update({ statLog: [...state.statLog, entry] });
+    setStatPlayer("");
+  };
+
+  const removeStat = (id: string) => {
+    update({ statLog: state.statLog.filter((s) => s.id !== id) });
+  };
+
+  const clearStats = () => update({ statLog: [] });
 
   const ScoreControl = ({ side, label }: { side: "home" | "away"; label: string }) => {
     const scoreKey = side === "home" ? "homeScore" : "awayScore";
