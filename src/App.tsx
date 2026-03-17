@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Status from "./pages/Status";
 import StatusUpdate from "./pages/StatusUpdate";
 import UnfollowFinder from "./pages/UnfollowFinder";
+import ScoreboardControl from "./pages/ScoreboardControl";
+import ScoreboardDisplay from "./pages/ScoreboardDisplay";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,8 @@ const App = () => (
           <Route path="/status" element={<Status />} />
           <Route path="/statusupdate" element={<StatusUpdate />} />
           <Route path="/unfollow" element={<UnfollowFinder />} />
+          <Route path="/scoreboard-control" element={<ScoreboardControl />} />
+          <Route path="/scoreboard" element={<ScoreboardDisplay />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
