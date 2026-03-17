@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 export type SportType = "football" | "basketball" | "baseball" | "hockey" | "soccer";
 
+export interface StatEntry {
+  id: string;
+  team: "home" | "away";
+  player: string;
+  action: string;
+  period: number;
+  clock: string;
+  timestamp: number;
+}
+
 export interface ScoreboardState {
   sport: SportType;
   homeTeam: string;
@@ -33,6 +43,7 @@ export interface ScoreboardState {
   homeSOG: number;
   awaySOG: number;
   stoppage: string;
+  statLog: StatEntry[];
 }
 
 export const SPORT_CONFIG: Record<SportType, { periods: number; periodName: string; defaultClock: string; timeoutsPerHalf: number }> = {
