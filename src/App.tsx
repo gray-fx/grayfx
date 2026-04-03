@@ -28,6 +28,7 @@ const App = () => (
           <Route path="/unfollow" element={<UnfollowFinder />} />
           <Route path="/scoreboard-control" element={<ScoreboardControl />} />
           <Route path="/scoreboard" element={<ScoreboardDisplay />} />
+          <Route path="/book" element={<Booking />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
