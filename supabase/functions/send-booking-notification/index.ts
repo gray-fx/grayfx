@@ -5,6 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
 const RECIPIENT = "gr4yfx@gmail.com";
 
 serve(async (req) => {
@@ -15,9 +16,18 @@ serve(async (req) => {
   try {
     const { name, contact, instagram, eventType, eventLocation, eventDate, eventTime, comments, partySize } = await req.json();
 
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not configured");
+      return new Response(JSON.stringify({ success: true, emailSent: false }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) {
-      console.error("RESEND_API_KEY not set — email not sent, booking still saved.");
+      console.error("RESEND_API_KEY not configured");
       return new Response(JSON.stringify({ success: true, emailSent: false }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -46,11 +56,12 @@ serve(async (req) => {
       </div>
     `;
 
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await fetch(`${GATEWAY_URL}/emails`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": RESEND_API_KEY,
       },
       body: JSON.stringify({
         from: "GrayFX Bookings <onboarding@resend.dev>",
@@ -62,7 +73,7 @@ serve(async (req) => {
 
     const data = await res.json();
     if (!res.ok) {
-      console.error("Resend API error:", data);
+      console.error("Resend gateway error:", JSON.stringify(data));
     }
 
     return new Response(JSON.stringify({ success: true, emailSent: res.ok }), {
