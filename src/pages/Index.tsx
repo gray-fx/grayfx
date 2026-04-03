@@ -58,11 +58,11 @@ const Index = () => {
               <ExternalLink className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
             <a
-              href="https://forms.gle/LDo6zU3NHZu224dP9"
+              href="#/book"
               className="group inline-flex items-center gap-2 rounded-sm border border-border bg-secondary/50 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-foreground transition-all hover:border-primary hover:text-primary"
             >
               <span>Book With Me</span>
-              <ExternalLink className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
             </a>
             <a
               href="#/status"
