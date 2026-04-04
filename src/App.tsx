@@ -23,8 +23,8 @@ const App = () => (
       <HashRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/status" element={<Status />} />
-          <Route path="/statusupdate" element={<StatusUpdate />} />
+          <Route path="/availability" element={<Availability />} />
+          <Route path="/admin/availability" element={<AdminAvailability />} />
           <Route path="/unfollow" element={<UnfollowFinder />} />
           <Route path="/scoreboard-control" element={<ScoreboardControl />} />
           <Route path="/scoreboard" element={<ScoreboardDisplay />} />
