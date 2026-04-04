@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAvailability } from "@/hooks/use-availability";
 
 const EVENT_TYPES = [
   "Sports Event",
@@ -25,6 +26,7 @@ const EVENT_TYPES = [
 
 const Booking = () => {
   const { toast } = useToast();
+  const { data: availability } = useAvailability();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
@@ -42,10 +44,20 @@ const Booking = () => {
   const update = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const unavailableDateSet = new Set(
+    availability?.filter((a) => !a.is_available).map((a) => a.date) ?? []
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.contact || !form.eventType || !form.eventLocation || !form.eventDate) {
       toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+
+    // Check if date is unavailable
+    if (unavailableDateSet.has(form.eventDate)) {
+      toast({ title: "Date unavailable", description: "That date is marked as unavailable. Please choose another date.", variant: "destructive" });
       return;
     }
 
@@ -201,6 +213,9 @@ const Booking = () => {
                 Event Date <span className="text-primary">*</span>
               </Label>
               <Input id="date" type="date" value={form.eventDate} onChange={(e) => update("eventDate", e.target.value)} required />
+              {form.eventDate && unavailableDateSet.has(form.eventDate) && (
+                <p className="text-xs text-destructive font-body">This date is unavailable. Please pick another.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="time" className="font-body text-sm uppercase tracking-widest text-muted-foreground">
