@@ -213,6 +213,9 @@ const Booking = () => {
                 Event Date <span className="text-primary">*</span>
               </Label>
               <Input id="date" type="date" value={form.eventDate} onChange={(e) => update("eventDate", e.target.value)} required />
+              {form.eventDate && unavailableDateSet.has(form.eventDate) && (
+                <p className="text-xs text-destructive font-body">This date is unavailable. Please pick another.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="time" className="font-body text-sm uppercase tracking-widest text-muted-foreground">
