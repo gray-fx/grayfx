@@ -44,10 +44,20 @@ const Booking = () => {
   const update = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const unavailableDateSet = new Set(
+    availability?.filter((a) => !a.is_available).map((a) => a.date) ?? []
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.contact || !form.eventType || !form.eventLocation || !form.eventDate) {
       toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+
+    // Check if date is unavailable
+    if (unavailableDateSet.has(form.eventDate)) {
+      toast({ title: "Date unavailable", description: "That date is marked as unavailable. Please choose another date.", variant: "destructive" });
       return;
     }
 
