@@ -26,6 +26,7 @@ const EVENT_TYPES = [
 
 const Booking = () => {
   const { toast } = useToast();
+  const { data: availability } = useAvailability();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
