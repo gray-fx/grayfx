@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import { Camera, ArrowLeft, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
