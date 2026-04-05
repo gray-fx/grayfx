@@ -24,6 +24,7 @@ const Availability = () => {
     : null;
 
   return (
+    <MaintenanceOverlay sectionId="availability">
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-6 py-16">
         <Link
