@@ -162,6 +162,7 @@ const Index = () => {
       </section>
 
       {/* ===== MY WORK SECTION ===== */}
+      <MaintenanceOverlay sectionId="gallery">
       <section className="relative py-32 px-6 bg-card/50">
         <div className="mx-auto max-w-6xl">
           <ScrollSection>
@@ -197,8 +198,10 @@ const Index = () => {
           </ScrollSection>
         </div>
       </section>
+      </MaintenanceOverlay>
 
       {/* ===== CONTACT / FOOTER SECTION ===== */}
+      <MaintenanceOverlay sectionId="contact">
       <section className="relative py-32 px-6">
         <div className="mx-auto max-w-2xl text-center">
           <ScrollSection>
@@ -247,6 +250,7 @@ const Index = () => {
           </ScrollSection>
         </div>
       </section>
+      </MaintenanceOverlay>
 
       {/* Footer */}
       <footer className="border-t border-border py-8 px-6 text-center">
