@@ -49,9 +49,14 @@ const AdminAvailability = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const fakeEmail = `${username}@grayfx.admin`;
+    // Try sign in first, if fails try sign up (first-time setup)
+    const { error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password });
     if (error) {
-      toast({ title: "Login failed", description: error.message, variant: "destructive" });
+      const { error: signUpError } = await supabase.auth.signUp({ email: fakeEmail, password });
+      if (signUpError) {
+        toast({ title: "Login failed", description: signUpError.message, variant: "destructive" });
+      }
     }
     setLoginLoading(false);
   };
@@ -131,8 +136,8 @@ const AdminAvailability = () => {
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Email</Label>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+              <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Username</Label>
+              <Input value={username} onChange={(e) => setUsername(e.target.value)} type="text" required />
             </div>
             <div className="space-y-2">
               <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Password</Label>
