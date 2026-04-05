@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import { Camera, ArrowLeft, CalendarDays } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
@@ -23,6 +24,7 @@ const Availability = () => {
     : null;
 
   return (
+    <MaintenanceOverlay sectionId="availability">
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-6 py-16">
         <Link
@@ -144,6 +146,7 @@ const Availability = () => {
         </motion.div>
       </div>
     </div>
+    </MaintenanceOverlay>
   );
 };
 

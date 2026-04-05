@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import { motion } from "framer-motion";
 import { Camera, ArrowLeft, Send, Loader2, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -128,6 +129,7 @@ const Booking = () => {
   }
 
   return (
+    <MaintenanceOverlay sectionId="booking">
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
@@ -268,6 +270,7 @@ const Booking = () => {
         </p>
       </footer>
     </div>
+    </MaintenanceOverlay>
   );
 };
 

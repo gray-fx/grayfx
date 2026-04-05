@@ -3,6 +3,9 @@ import { motion } from "framer-motion";
 import PhotoCollage from "@/components/PhotoCollage";
 import ScrollSection from "@/components/ScrollSection";
 import GalleryGrid from "@/components/GalleryGrid";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
+import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 
 const socialLinks = [
   { icon: Instagram, label: "Instagram", href: "https://www.instagram.com/gr4yfx" },
@@ -13,7 +16,8 @@ const socialLinks = [
 const Index = () => {
   return (
     <div className="relative bg-background">
-      {/* ===== HERO SECTION ===== */}
+      <AnnouncementBanner />
+      <AnnouncementPopup />
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
         <PhotoCollage />
 
@@ -158,6 +162,7 @@ const Index = () => {
       </section>
 
       {/* ===== MY WORK SECTION ===== */}
+      <MaintenanceOverlay sectionId="gallery">
       <section className="relative py-32 px-6 bg-card/50">
         <div className="mx-auto max-w-6xl">
           <ScrollSection>
@@ -193,8 +198,10 @@ const Index = () => {
           </ScrollSection>
         </div>
       </section>
+      </MaintenanceOverlay>
 
       {/* ===== CONTACT / FOOTER SECTION ===== */}
+      <MaintenanceOverlay sectionId="contact">
       <section className="relative py-32 px-6">
         <div className="mx-auto max-w-2xl text-center">
           <ScrollSection>
@@ -243,6 +250,7 @@ const Index = () => {
           </ScrollSection>
         </div>
       </section>
+      </MaintenanceOverlay>
 
       {/* Footer */}
       <footer className="border-t border-border py-8 px-6 text-center">
