@@ -3,6 +3,9 @@ import { motion } from "framer-motion";
 import PhotoCollage from "@/components/PhotoCollage";
 import ScrollSection from "@/components/ScrollSection";
 import GalleryGrid from "@/components/GalleryGrid";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
+import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 
 const socialLinks = [
   { icon: Instagram, label: "Instagram", href: "https://www.instagram.com/gr4yfx" },
