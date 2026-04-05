@@ -146,6 +146,7 @@ const Availability = () => {
         </motion.div>
       </div>
     </div>
+    </MaintenanceOverlay>
   );
 };
 
