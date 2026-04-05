@@ -16,7 +16,8 @@ const socialLinks = [
 const Index = () => {
   return (
     <div className="relative bg-background">
-      {/* ===== HERO SECTION ===== */}
+      <AnnouncementBanner />
+      <AnnouncementPopup />
       <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
         <PhotoCollage />
 
