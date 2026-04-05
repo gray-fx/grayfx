@@ -129,6 +129,7 @@ const Booking = () => {
   }
 
   return (
+    <MaintenanceOverlay sectionId="booking">
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
@@ -269,6 +270,7 @@ const Booking = () => {
         </p>
       </footer>
     </div>
+    </MaintenanceOverlay>
   );
 };
 
