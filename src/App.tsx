@@ -11,6 +11,7 @@ import UnfollowFinder from "./pages/UnfollowFinder";
 import ScoreboardControl from "./pages/ScoreboardControl";
 import ScoreboardDisplay from "./pages/ScoreboardDisplay";
 import Booking from "./pages/Booking";
+import Upload from "./pages/Upload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
