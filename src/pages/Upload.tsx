@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Upload as UploadIcon, X, FileIcon, Loader2 } from "lucide-react";
 
-const MAX_TOTAL_SIZE = 25 * 1024 * 1024; // 25MB total (Resend limit)
+const MAX_BATCH_SIZE = 25 * 1024 * 1024; // 25MB per email (Resend limit)
 
 export default function Upload() {
   const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  const [progress, setProgress] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
@@ -33,44 +34,79 @@ export default function Upload() {
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
-        resolve(result.split(",")[1]); // strip data:...;base64,
+        resolve(result.split(",")[1]);
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+
+  // Split files into batches that each fit under 25MB
+  // Base64 encoding adds ~33% overhead
+  const createBatches = (fileList: { filename: string; content: string; rawSize: number }[]) => {
+    const batches: { filename: string; content: string }[][] = [];
+    let currentBatch: { filename: string; content: string }[] = [];
+    let currentSize = 0;
+
+    for (const file of fileList) {
+      const encodedSize = file.rawSize * 1.37; // base64 overhead estimate
+      if (currentBatch.length > 0 && currentSize + encodedSize > MAX_BATCH_SIZE) {
+        batches.push(currentBatch);
+        currentBatch = [];
+        currentSize = 0;
+      }
+      currentBatch.push({ filename: file.filename, content: file.content });
+      currentSize += encodedSize;
+    }
+    if (currentBatch.length > 0) batches.push(currentBatch);
+    return batches;
+  };
 
   const handleSend = async () => {
     if (files.length === 0) {
       toast({ title: "No files selected", variant: "destructive" });
       return;
     }
-    if (totalSize > MAX_TOTAL_SIZE) {
-      toast({ title: "Total size exceeds 25 MB limit", variant: "destructive" });
-      return;
-    }
 
     setSending(true);
     try {
-      const attachments = await Promise.all(
+      setProgress("Preparing files…");
+      const prepared = await Promise.all(
         files.map(async (f) => ({
           filename: f.name,
           content: await fileToBase64(f),
+          rawSize: f.size,
         }))
       );
 
-      const { data, error } = await supabase.functions.invoke("send-file-email", {
-        body: { attachments },
+      const batches = createBatches(prepared);
+      const totalBatches = batches.length;
+
+      for (let i = 0; i < batches.length; i++) {
+        setProgress(
+          totalBatches > 1
+            ? `Sending batch ${i + 1} of ${totalBatches}…`
+            : "Sending…"
+        );
+        const { error } = await supabase.functions.invoke("send-file-email", {
+          body: { attachments: batches[i] },
+        });
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Files sent successfully!",
+        description:
+          totalBatches > 1
+            ? `Sent in ${totalBatches} emails due to size limits.`
+            : undefined,
       });
-
-      if (error) throw error;
-
-      toast({ title: "Files sent successfully!" });
       setFiles([]);
     } catch (err: any) {
       console.error(err);
       toast({ title: "Failed to send files", description: err.message, variant: "destructive" });
     } finally {
       setSending(false);
+      setProgress("");
     }
   };
 
@@ -79,7 +115,6 @@ export default function Upload() {
       <div className="w-full max-w-lg space-y-6">
         <h1 className="text-2xl font-bold text-center text-foreground">Upload &amp; Send Files</h1>
 
-        {/* Drop zone */}
         <div
           onClick={() => inputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
@@ -100,7 +135,6 @@ export default function Upload() {
           />
         </div>
 
-        {/* File list */}
         {files.length > 0 && (
           <div className="space-y-2">
             {files.map((f, i) => (
@@ -114,9 +148,13 @@ export default function Upload() {
               </div>
             ))}
             <p className="text-xs text-muted-foreground text-right">
-              Total: {formatSize(totalSize)} / 25 MB
+              Total: {formatSize(totalSize)}
             </p>
           </div>
+        )}
+
+        {progress && (
+          <p className="text-sm text-center text-muted-foreground">{progress}</p>
         )}
 
         <Button onClick={handleSend} disabled={sending || files.length === 0} className="w-full">
