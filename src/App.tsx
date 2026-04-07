@@ -6,7 +6,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 
 import Index from "./pages/Index";
 import Availability from "./pages/Availability";
-import AdminAvailability from "./pages/AdminAvailability";
+import AdminAvailability from "./pages/AdminPanel";
 import UnfollowFinder from "./pages/UnfollowFinder";
 import ScoreboardControl from "./pages/ScoreboardControl";
 import ScoreboardDisplay from "./pages/ScoreboardDisplay";
