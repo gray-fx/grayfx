@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key } from "lucide-react";
+import { ArrowLeft, CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key, ImageIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import AdminCalendarTab from "@/components/admin/AdminCalendarTab";
 import AdminAnnouncementsTab from "@/components/admin/AdminAnnouncementsTab";
 import AdminMaintenanceTab from "@/components/admin/AdminMaintenanceTab";
 import AdminCredentialsTab from "@/components/admin/AdminCredentialsTab";
+import AdminPhotosTab from "@/components/admin/AdminPhotosTab";
 
 const AdminAvailability = () => {
   const { toast } = useToast();
@@ -127,10 +128,14 @@ const AdminAvailability = () => {
         </motion.div>
 
         <Tabs defaultValue="calendar" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-5 mb-8">
             <TabsTrigger value="calendar" className="gap-1.5 text-xs">
               <CalendarDays className="h-4 w-4" />
               <span className="hidden sm:inline">Calendar</span>
+            </TabsTrigger>
+            <TabsTrigger value="photos" className="gap-1.5 text-xs">
+              <ImageIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Photos</span>
             </TabsTrigger>
             <TabsTrigger value="announcements" className="gap-1.5 text-xs">
               <Megaphone className="h-4 w-4" />
@@ -148,6 +153,9 @@ const AdminAvailability = () => {
 
           <TabsContent value="calendar">
             <AdminCalendarTab />
+          </TabsContent>
+          <TabsContent value="photos">
+            <AdminPhotosTab />
           </TabsContent>
           <TabsContent value="announcements">
             <AdminAnnouncementsTab />
