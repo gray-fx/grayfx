@@ -11,6 +11,7 @@ import UnfollowFinder from "./pages/UnfollowFinder";
 import ScoreboardControl from "./pages/ScoreboardControl";
 import ScoreboardDisplay from "./pages/ScoreboardDisplay";
 import Booking from "./pages/Booking";
+import Upload from "./pages/Upload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/scoreboard-control" element={<ScoreboardControl />} />
           <Route path="/scoreboard" element={<ScoreboardDisplay />} />
           <Route path="/book" element={<Booking />} />
+          <Route path="/upload" element={<Upload />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
