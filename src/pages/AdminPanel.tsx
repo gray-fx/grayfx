@@ -16,7 +16,7 @@ import AdminMaintenanceTab from "@/components/admin/AdminMaintenanceTab";
 import AdminCredentialsTab from "@/components/admin/AdminCredentialsTab";
 import AdminPhotosTab from "@/components/admin/AdminPhotosTab";
 
-const AdminAvailability = () => {
+const AdminPanel = () => {
   const { toast } = useToast();
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -172,4 +172,4 @@ const AdminAvailability = () => {
   );
 };
 
-export default AdminAvailability;
+export default AdminPanel;
