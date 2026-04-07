@@ -1,3 +1,4 @@
+import { useGalleryPhotos } from "@/hooks/use-gallery-photos";
 import heroBg1 from "@/assets/hero-bg-1.jpg";
 import heroBg2 from "@/assets/hero-bg-2.jpg";
 import heroBg3 from "@/assets/hero-bg-3.jpg";
@@ -13,7 +14,7 @@ import grid12 from "@/assets/grid-12.jpg";
 import grid13 from "@/assets/grid-13.jpg";
 import grid14 from "@/assets/grid-14.jpg";
 
-const images = [
+const fallbackImages = [
   heroBg1, grid7, collage4, grid10, collage6,
   grid9, heroBg2, grid12, grid14, heroBg3,
   grid8, collage5, grid11, grid13, heroBg1,
@@ -21,6 +22,21 @@ const images = [
 ];
 
 const PhotoCollage = () => {
+  const { data: dbPhotos } = useGalleryPhotos("collage");
+
+  // Use DB photos if available, pad/repeat to fill grid
+  let images: string[];
+  if (dbPhotos && dbPhotos.length > 0) {
+    const urls = dbPhotos.map((p) => p.image_url);
+    images = [];
+    while (images.length < 20) {
+      images.push(...urls);
+    }
+    images = images.slice(0, 20);
+  } else {
+    images = fallbackImages;
+  }
+
   return (
     <div className="absolute inset-0 overflow-hidden">
       <div

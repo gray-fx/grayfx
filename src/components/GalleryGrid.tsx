@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useGalleryPhotos } from "@/hooks/use-gallery-photos";
 import heroBg1 from "@/assets/hero-bg-1.jpg";
 import heroBg2 from "@/assets/hero-bg-2.jpg";
 import heroBg3 from "@/assets/hero-bg-3.jpg";
@@ -6,7 +7,7 @@ import collage4 from "@/assets/collage-4.jpg";
 import collage5 from "@/assets/collage-5.jpg";
 import collage6 from "@/assets/collage-6.jpg";
 
-const galleryImages = [
+const fallbackImages = [
   { src: heroBg1, title: "@ Howard", category: "Football" },
   { src: heroBg2, title: "@ Tower Hill", category: "Field Hockey" },
   { src: collage4, title: "UnLocke the Light", category: "SL24 Foundation" },
@@ -16,9 +17,15 @@ const galleryImages = [
 ];
 
 const GalleryGrid = () => {
+  const { data: dbPhotos } = useGalleryPhotos("gallery");
+
+  const images = dbPhotos && dbPhotos.length > 0
+    ? dbPhotos.map((p) => ({ src: p.image_url, title: p.caption, category: p.category }))
+    : fallbackImages;
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {galleryImages.map((img, i) => (
+      {images.map((img, i) => (
         <motion.div
           key={i}
           initial={{ opacity: 0, scale: 0.9 }}
