@@ -130,12 +130,21 @@ const SCHOOLS = [
 
 function extractLinks(html: string, baseUrl: string): { href: string; text: string }[] {
   const links: { href: string; text: string }[] = [];
-  const regex = /<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
+  const regex = /<a[^>]+href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match;
   while ((match = regex.exec(html)) !== null) {
-    let href = match[1];
+    let href = match[1].trim();
     const text = match[2].replace(/<[^>]*>/g, "").trim();
-    if (href.startsWith("/")) href = baseUrl + href;
+    // Skip javascript:, mailto:, tel: links
+    if (/^(javascript|mailto|tel):/i.test(href)) continue;
+    // Handle relative URLs (no leading slash, no protocol)
+    if (!href.startsWith("http://") && !href.startsWith("https://")) {
+      if (href.startsWith("/")) {
+        href = baseUrl + href;
+      } else {
+        href = baseUrl + "/" + href;
+      }
+    }
     links.push({ href, text });
   }
   return links;
