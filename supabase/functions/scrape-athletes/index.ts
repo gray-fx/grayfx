@@ -166,25 +166,31 @@ function parseRosterTable(html: string): { jersey: string; firstName: string; la
     let isHeader = true;
     
     while ((rowMatch = rowRegex.exec(table)) !== null) {
-      if (isHeader) { isHeader = false; continue; }
       
       const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
       const cells: string[] = [];
       let cellMatch;
       while ((cellMatch = cellRegex.exec(rowMatch[1])) !== null) {
-        cells.push(cellMatch[1].replace(/<[^>]*>/g, "").trim());
+        // Strip HTML tags and &nbsp;, then trim
+        const clean = cellMatch[1].replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, "").trim();
+        cells.push(clean);
       }
       
-      // Typical format: (image), Jersey#, First Name, Last Name, Grade
+      // Structure: [empty/image, Jersey#, First Name, Last Name, Grade] = 5 cells
+      // Or: [Jersey#, First Name, Last Name, Grade] = 4 cells
       if (cells.length >= 4) {
-        const hasImage = cells[0] === "" || cells[0].length === 0;
-        const offset = hasImage ? 1 : 0;
+        // Find offset: skip leading empty cells
+        let offset = 0;
+        while (offset < cells.length - 4 && (cells[offset] === "" || cells[offset] === "&nbsp;")) {
+          offset++;
+        }
+        
         const jersey = cells[offset] || "";
         const firstName = cells[offset + 1] || "";
         const lastName = cells[offset + 2] || "";
         const grade = cells[offset + 3] || "";
         
-        if (firstName && lastName && firstName !== "First Name") {
+        if (firstName && lastName && !/first\s*name/i.test(firstName) && !/jersey/i.test(jersey)) {
           athletes.push({ jersey, firstName, lastName, grade });
         }
       }
