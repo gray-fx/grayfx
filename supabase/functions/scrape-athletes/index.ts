@@ -130,12 +130,21 @@ const SCHOOLS = [
 
 function extractLinks(html: string, baseUrl: string): { href: string; text: string }[] {
   const links: { href: string; text: string }[] = [];
-  const regex = /<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
+  const regex = /<a[^>]+href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match;
   while ((match = regex.exec(html)) !== null) {
-    let href = match[1];
+    let href = match[1].trim();
     const text = match[2].replace(/<[^>]*>/g, "").trim();
-    if (href.startsWith("/")) href = baseUrl + href;
+    // Skip javascript:, mailto:, tel: links
+    if (/^(javascript|mailto|tel):/i.test(href)) continue;
+    // Handle relative URLs (no leading slash, no protocol)
+    if (!href.startsWith("http://") && !href.startsWith("https://")) {
+      if (href.startsWith("/")) {
+        href = baseUrl + href;
+      } else {
+        href = baseUrl + "/" + href;
+      }
+    }
     links.push({ href, text });
   }
   return links;
@@ -157,25 +166,31 @@ function parseRosterTable(html: string): { jersey: string; firstName: string; la
     let isHeader = true;
     
     while ((rowMatch = rowRegex.exec(table)) !== null) {
-      if (isHeader) { isHeader = false; continue; }
       
       const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
       const cells: string[] = [];
       let cellMatch;
       while ((cellMatch = cellRegex.exec(rowMatch[1])) !== null) {
-        cells.push(cellMatch[1].replace(/<[^>]*>/g, "").trim());
+        // Strip HTML tags and &nbsp;, then trim
+        const clean = cellMatch[1].replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, "").trim();
+        cells.push(clean);
       }
       
-      // Typical format: (image), Jersey#, First Name, Last Name, Grade
+      // Structure: [empty/image, Jersey#, First Name, Last Name, Grade] = 5 cells
+      // Or: [Jersey#, First Name, Last Name, Grade] = 4 cells
       if (cells.length >= 4) {
-        const hasImage = cells[0] === "" || cells[0].length === 0;
-        const offset = hasImage ? 1 : 0;
+        // Find offset: skip leading empty cells
+        let offset = 0;
+        while (offset < cells.length - 4 && (cells[offset] === "" || cells[offset] === "&nbsp;")) {
+          offset++;
+        }
+        
         const jersey = cells[offset] || "";
         const firstName = cells[offset + 1] || "";
         const lastName = cells[offset + 2] || "";
         const grade = cells[offset + 3] || "";
         
-        if (firstName && lastName && firstName !== "First Name") {
+        if (firstName && lastName && !/first\s*name/i.test(firstName) && !/jersey/i.test(jersey)) {
           athletes.push({ jersey, firstName, lastName, grade });
         }
       }
@@ -258,8 +273,11 @@ async function scrapeSchool(
     // Get unique sport page links and look for roster sub-pages
     const sportUrls = new Set<string>();
     for (const link of sportPages) {
-      if (sportUrls.size >= 30) break; // limit
-      sportUrls.add(link.href);
+      if (sportUrls.size >= 50) break;
+      // Only include sport-like pages (skip admin, contact, etc.)
+      if (/page\d+/.test(link.href)) {
+        sportUrls.add(link.href);
+      }
     }
     
     for (const sportUrl of sportUrls) {
