@@ -32,6 +32,7 @@ const App = () => (
           <Route path="/scoreboard" element={<ScoreboardDisplay />} />
           <Route path="/book" element={<Booking />} />
           <Route path="/upload" element={<Upload />} />
+          <Route path="/athlete-finder" element={<AthleteFinder />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
