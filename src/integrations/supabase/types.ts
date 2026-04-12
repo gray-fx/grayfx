@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      athletes: {
+        Row: {
+          created_at: string
+          first_name: string
+          grade: string | null
+          id: string
+          jersey_number: string | null
+          last_name: string
+          level: string
+          school_name: string
+          school_url: string
+          season: string
+          sport: string
+        }
+        Insert: {
+          created_at?: string
+          first_name: string
+          grade?: string | null
+          id?: string
+          jersey_number?: string | null
+          last_name: string
+          level: string
+          school_name: string
+          school_url: string
+          season: string
+          sport: string
+        }
+        Update: {
+          created_at?: string
+          first_name?: string
+          grade?: string | null
+          id?: string
+          jersey_number?: string | null
+          last_name?: string
+          level?: string
+          school_name?: string
+          school_url?: string
+          season?: string
+          sport?: string
+        }
+        Relationships: []
+      }
       availability: {
         Row: {
           created_at: string
@@ -139,7 +181,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       [_ in never]: never
