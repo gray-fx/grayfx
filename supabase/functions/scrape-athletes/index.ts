@@ -267,8 +267,11 @@ async function scrapeSchool(
     // Get unique sport page links and look for roster sub-pages
     const sportUrls = new Set<string>();
     for (const link of sportPages) {
-      if (sportUrls.size >= 30) break; // limit
-      sportUrls.add(link.href);
+      if (sportUrls.size >= 50) break;
+      // Only include sport-like pages (skip admin, contact, etc.)
+      if (/page\d+/.test(link.href)) {
+        sportUrls.add(link.href);
+      }
     }
     
     for (const sportUrl of sportUrls) {
