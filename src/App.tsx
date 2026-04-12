@@ -12,6 +12,7 @@ import ScoreboardControl from "./pages/ScoreboardControl";
 import ScoreboardDisplay from "./pages/ScoreboardDisplay";
 import Booking from "./pages/Booking";
 import Upload from "./pages/Upload";
+import AthleteFinder from "./pages/AthleteFinder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
