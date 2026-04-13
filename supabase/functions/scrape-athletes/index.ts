@@ -408,7 +408,7 @@ function extractLevelFromTab(html: string): string | null {
   return null;
 }
 
-async function fetchWithTimeout(url: string, timeout = 15000): Promise<string | null> {
+async function fetchWithTimeout(url: string, timeout = 10000): Promise<string | null> {
   try {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -421,36 +421,47 @@ async function fetchWithTimeout(url: string, timeout = 15000): Promise<string | 
   }
 }
 
+// Concurrency-limited parallel execution
+async function parallelMap<T, R>(items: T[], fn: (item: T) => Promise<R>, concurrency = 5): Promise<R[]> {
+  const results: R[] = [];
+  let idx = 0;
+  
+  async function worker() {
+    while (idx < items.length) {
+      const i = idx++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
 async function fetchRosterForSeason(
   rosterUrl: string,
   seasonValue: string,
-  defaultHtml: string | null
+  defaultHtml: string
 ): Promise<{ html: string; season: string } | null> {
-  // First fetch the default page to get form fields
-  const baseHtml = defaultHtml || await fetchWithTimeout(rosterUrl);
-  if (!baseHtml) return null;
-  
-  const formFields = extractFormFields(baseHtml);
+  const formFields = extractFormFields(defaultHtml);
   
   // Check if this season is already the selected one
-  const selectedMatch = baseHtml.match(/<option[^>]+selected[^>]+value=["'](\d+)["']/i);
+  const selectedMatch = defaultHtml.match(/<option[^>]+selected[^>]+value=["'](\d+)["']/i);
   if (selectedMatch && selectedMatch[1] === seasonValue) {
-    return { html: baseHtml, season: SEASON_LABELS[seasonValue] || extractSeason(baseHtml) };
+    return { html: defaultHtml, season: SEASON_LABELS[seasonValue] || extractSeason(defaultHtml) };
   }
   
   // POST to switch season
   try {
     const formData = new URLSearchParams();
-    // Add all hidden fields
     for (const [key, value] of Object.entries(formFields)) {
       formData.append(key, value);
     }
-    // Set the season dropdown and click Go
     formData.set("ctl00$MainContent$ctl01$Seasonswitcher1$ddlSchoolYear", seasonValue);
     formData.set("ctl00$MainContent$ctl01$Seasonswitcher1$btnSwitch", "Go");
     
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 15000);
+    const id = setTimeout(() => controller.abort(), 10000);
     const resp = await fetch(rosterUrl, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -468,6 +479,58 @@ async function fetchRosterForSeason(
   }
 }
 
+async function scrapeRosterPage(
+  rosterUrl: string,
+  school: { name: string; url: string },
+  supabase: any
+): Promise<{ athletes: number; errors: string[] }> {
+  const errors: string[] = [];
+  let totalAthletes = 0;
+  
+  const defaultHtml = await fetchWithTimeout(rosterUrl);
+  if (!defaultHtml) return { athletes: 0, errors: [`Could not fetch ${rosterUrl}`] };
+  
+  const { sport, level } = extractSportAndLevel(defaultHtml);
+  
+  // Scrape each of the last 4 seasons sequentially (they share form state)
+  for (const seasonVal of SEASON_VALUES) {
+    try {
+      const result = await fetchRosterForSeason(rosterUrl, seasonVal, defaultHtml);
+      if (!result) continue;
+      
+      const season = result.season;
+      const athletes = parseRosterTable(result.html);
+      if (athletes.length === 0) continue;
+      
+      const rows = athletes.map(a => ({
+        school_name: school.name,
+        school_url: school.url,
+        sport,
+        level,
+        season,
+        first_name: a.firstName,
+        last_name: a.lastName,
+        grade: a.grade || null,
+        jersey_number: a.jersey || null,
+      }));
+      
+      const { error } = await supabase
+        .from("athletes")
+        .upsert(rows, { onConflict: "school_url,sport,level,season,first_name,last_name" });
+      
+      if (error) {
+        errors.push(`DB error for ${sport} ${level} ${season}: ${error.message}`);
+      } else {
+        totalAthletes += athletes.length;
+      }
+    } catch (e) {
+      errors.push(`Error season ${seasonVal}: ${e.message}`);
+    }
+  }
+  
+  return { athletes: totalAthletes, errors };
+}
+
 async function scrapeSchool(
   school: { name: string; url: string },
   supabase: any
@@ -475,7 +538,6 @@ async function scrapeSchool(
   const errors: string[] = [];
   let totalAthletes = 0;
   
-  // Step 1: Fetch homepage to find sport pages
   const homeHtml = await fetchWithTimeout(school.url);
   if (!homeHtml) {
     return { school: school.name, athletes: 0, errors: ["Could not fetch homepage"] };
@@ -483,88 +545,37 @@ async function scrapeSchool(
   
   const links = extractLinks(homeHtml, school.url);
   
-  // Step 2: Find roster links from sport sub-tabs
-  // First, collect all sport page links from the left sidebar
+  // Collect sport page links from sidebar
   const sportPageLinks = links.filter(l => /page\d+/.test(l.href));
   const uniqueSportUrls = [...new Set(sportPageLinks.map(l => l.href))];
   
-  // Visit each sport page to find roster sub-tab links
   const rosterLinks: { href: string; text: string }[] = [];
-  
-  // Also check if homepage already has roster links
   const homeRosterLinks = links.filter(l => /roster/i.test(l.text));
   rosterLinks.push(...homeRosterLinks);
   
-  // Visit sport pages to find roster sub-tabs
-  for (const sportUrl of uniqueSportUrls) {
-    if (rosterLinks.length > 200) break; // safety limit
+  // Visit sport pages in parallel to find roster sub-tabs (concurrency 5)
+  const sportPages = await parallelMap(uniqueSportUrls, async (sportUrl) => {
     const sportHtml = await fetchWithTimeout(sportUrl);
-    if (!sportHtml) continue;
-    
+    if (!sportHtml) return [];
     const subLinks = extractLinks(sportHtml, school.url);
-    const subRosters = subLinks.filter(l => /roster/i.test(l.text));
-    rosterLinks.push(...subRosters);
+    return subLinks.filter(l => /roster/i.test(l.text));
+  }, 5);
+  
+  for (const pageRosters of sportPages) {
+    rosterLinks.push(...pageRosters);
   }
   
-  // Deduplicate roster links
   const uniqueRosterUrls = [...new Set(rosterLinks.map(l => l.href))];
-  
   console.log(`${school.name}: Found ${uniqueRosterUrls.length} roster pages`);
   
-  // Step 3: Scrape each roster page across multiple seasons
-  for (const rosterUrl of uniqueRosterUrls) {
-    try {
-      // First fetch the default page
-      const defaultHtml = await fetchWithTimeout(rosterUrl);
-      if (!defaultHtml) {
-        errors.push(`Could not fetch ${rosterUrl}`);
-        continue;
-      }
-      
-      const { sport, level } = extractSportAndLevel(defaultHtml);
-      
-      // Scrape each of the last 4 seasons
-      for (const seasonVal of SEASON_VALUES) {
-        try {
-          const result = await fetchRosterForSeason(rosterUrl, seasonVal, 
-            seasonVal === SEASON_VALUES[0] ? defaultHtml : null);
-          
-          if (!result) continue;
-          
-          const season = result.season;
-          const athletes = parseRosterTable(result.html);
-          
-          if (athletes.length === 0) continue;
-          
-          // Batch upsert
-          const rows = athletes.map(a => ({
-            school_name: school.name,
-            school_url: school.url,
-            sport,
-            level,
-            season,
-            first_name: a.firstName,
-            last_name: a.lastName,
-            grade: a.grade || null,
-            jersey_number: a.jersey || null,
-          }));
-          
-          const { error } = await supabase
-            .from("athletes")
-            .upsert(rows, { onConflict: "school_url,sport,level,season,first_name,last_name" });
-          
-          if (error) {
-            errors.push(`DB error for ${sport} ${level} ${season}: ${error.message}`);
-          } else {
-            totalAthletes += athletes.length;
-          }
-        } catch (e) {
-          errors.push(`Error fetching season ${seasonVal} for ${rosterUrl}: ${e.message}`);
-        }
-      }
-    } catch (e) {
-      errors.push(`Error scraping ${rosterUrl}: ${e.message}`);
-    }
+  // Scrape roster pages in parallel (concurrency 3 since each does 4 season POSTs)
+  const rosterResults = await parallelMap(uniqueRosterUrls, async (rosterUrl) => {
+    return scrapeRosterPage(rosterUrl, school, supabase);
+  }, 3);
+  
+  for (const r of rosterResults) {
+    totalAthletes += r.athletes;
+    errors.push(...r.errors);
   }
   
   return { school: school.name, athletes: totalAthletes, errors };
