@@ -89,49 +89,56 @@ const AthleteFinder = () => {
     setScrapeProgress("Starting scrape...");
 
     try {
-      let nextIndex: number | null = 0;
-      let totalProcessed = 0;
+      // Get school list
+      const { data: listData } = await supabase.functions.invoke("scrape-athletes", {
+        body: { action: "list-schools" },
+      });
+      const totalSchools = listData?.total || 115;
       let totalAthletes = 0;
+      const ROSTER_BATCH_SIZE = 8;
 
-      while (nextIndex !== null) {
-        setScrapeProgress(
-          `Scraping schools ${nextIndex + 1}-${nextIndex + 2}... (${totalAthletes} athletes found so far)`
-        );
+      for (let i = 0; i < totalSchools; i++) {
+        // Phase 1: Discover roster URLs
+        setScrapeProgress(`[${i + 1}/${totalSchools}] Discovering rosters... (${totalAthletes} athletes so far)`);
 
-        const { data, error } = await supabase.functions.invoke(
-          "scrape-athletes",
-          {
+        const { data: discoverData, error: discoverErr } = await supabase.functions.invoke("scrape-athletes", {
+          body: { action: "discover", schoolIndex: i, password: scrapePassword },
+        });
+
+        if (discoverErr) throw discoverErr;
+        if (discoverData?.error) throw new Error(discoverData.error);
+
+        const rosterUrls: string[] = discoverData.rosterUrls || [];
+        if (rosterUrls.length === 0) continue;
+
+        // Phase 2: Scrape roster URLs in batches
+        for (let j = 0; j < rosterUrls.length; j += ROSTER_BATCH_SIZE) {
+          const batch = rosterUrls.slice(j, j + ROSTER_BATCH_SIZE);
+          setScrapeProgress(
+            `[${i + 1}/${totalSchools}] ${discoverData.school}: rosters ${j + 1}-${j + batch.length}/${rosterUrls.length} (${totalAthletes} athletes)`
+          );
+
+          const { data: scrapeData, error: scrapeErr } = await supabase.functions.invoke("scrape-athletes", {
             body: {
-              action: "scrape-batch",
-              schoolIndex: nextIndex,
-              batchSize: 2,
+              action: "scrape-rosters",
+              rosterUrls: batch,
+              schoolName: discoverData.school,
+              schoolUrl: discoverData.schoolUrl,
               password: scrapePassword,
             },
-          }
-        );
+          });
 
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-
-        nextIndex = data.nextIndex;
-        totalProcessed = data.processed;
-        for (const r of data.results) {
-          totalAthletes += r.athletes;
+          if (scrapeErr) throw scrapeErr;
+          if (scrapeData?.error) throw new Error(scrapeData.error);
+          totalAthletes += scrapeData.athletes || 0;
         }
       }
 
-      setScrapeProgress(`Done! Scraped ${totalProcessed} schools, found ${totalAthletes} athletes across 4 seasons.`);
-      toast({
-        title: "Scraping Complete",
-        description: `Found ${totalAthletes} athletes across ${totalProcessed} schools.`,
-      });
+      setScrapeProgress(`Done! Scraped ${totalSchools} schools, found ${totalAthletes} athletes across 4 seasons.`);
+      toast({ title: "Scraping Complete", description: `Found ${totalAthletes} athletes.` });
     } catch (err: any) {
       setScrapeProgress(`Error: ${err.message}`);
-      toast({
-        title: "Scrape Error",
-        description: err.message,
-        variant: "destructive",
-      });
+      toast({ title: "Scrape Error", description: err.message, variant: "destructive" });
     } finally {
       setScraping(false);
     }
