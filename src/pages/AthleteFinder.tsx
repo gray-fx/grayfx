@@ -2,10 +2,17 @@ import { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Search, Loader2, Users, School, Trophy, ArrowLeft, RefreshCw } from "lucide-react";
+import { Search, Loader2, Users, School, Trophy, ArrowLeft, RefreshCw, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface AthleteRecord {
   id: string;
@@ -26,6 +33,8 @@ const AthleteFinder = () => {
   const [searched, setSearched] = useState(false);
   const [scraping, setScraping] = useState(false);
   const [scrapeProgress, setScrapeProgress] = useState("");
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [scrapePassword, setScrapePassword] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -41,12 +50,10 @@ const AthleteFinder = () => {
       let dbQuery = supabase.from("athletes").select("*");
 
       if (parts.length === 1) {
-        // Single word: search first or last name
         dbQuery = dbQuery.or(
           `first_name.ilike.%${parts[0]}%,last_name.ilike.%${parts[0]}%`
         );
       } else {
-        // Multi word: search first + last name combo
         dbQuery = dbQuery
           .ilike("first_name", `%${parts[0]}%`)
           .ilike("last_name", `%${parts.slice(1).join(" ")}%`);
@@ -71,7 +78,13 @@ const AthleteFinder = () => {
     }
   }, [query, toast]);
 
-  const handleScrape = async () => {
+  const handleScrapeStart = () => {
+    setShowPasswordDialog(true);
+    setScrapePassword("");
+  };
+
+  const handleScrapeConfirm = async () => {
+    setShowPasswordDialog(false);
     setScraping(true);
     setScrapeProgress("Starting scrape...");
 
@@ -82,7 +95,7 @@ const AthleteFinder = () => {
 
       while (nextIndex !== null) {
         setScrapeProgress(
-          `Scraping schools ${nextIndex + 1}-${nextIndex + 3}... (${totalAthletes} athletes found so far)`
+          `Scraping schools ${nextIndex + 1}-${nextIndex + 2}... (${totalAthletes} athletes found so far)`
         );
 
         const { data, error } = await supabase.functions.invoke(
@@ -91,12 +104,14 @@ const AthleteFinder = () => {
             body: {
               action: "scrape-batch",
               schoolIndex: nextIndex,
-              batchSize: 3,
+              batchSize: 2,
+              password: scrapePassword,
             },
           }
         );
 
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
         nextIndex = data.nextIndex;
         totalProcessed = data.processed;
@@ -105,7 +120,7 @@ const AthleteFinder = () => {
         }
       }
 
-      setScrapeProgress(`Done! Scraped ${totalProcessed} schools, found ${totalAthletes} athletes.`);
+      setScrapeProgress(`Done! Scraped ${totalProcessed} schools, found ${totalAthletes} athletes across 4 seasons.`);
       toast({
         title: "Scraping Complete",
         description: `Found ${totalAthletes} athletes across ${totalProcessed} schools.`,
@@ -135,20 +150,13 @@ const AthleteFinder = () => {
       {/* Header */}
       <div className="bg-card border-b border-border">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/")}
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold font-montserrat">
-              Athlete Finder
-            </h1>
+            <h1 className="text-2xl font-bold font-montserrat">Athlete Finder</h1>
             <p className="text-sm text-muted-foreground">
-              Search Delaware & Maryland high school and middle school sports
-              rosters
+              Search Delaware & Maryland high school and middle school sports rosters (last 4 years)
             </p>
           </div>
         </div>
@@ -172,11 +180,7 @@ const AthleteFinder = () => {
             disabled={loading || !query.trim()}
             className="h-12 px-6"
           >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              "Search"
-            )}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Search"}
           </Button>
         </div>
 
@@ -185,17 +189,19 @@ const AthleteFinder = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleScrape}
+            onClick={handleScrapeStart}
             disabled={scraping}
             className="gap-2"
           >
-            <RefreshCw className={`h-4 w-4 ${scraping ? "animate-spin" : ""}`} />
+            {scraping ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <Lock className="h-4 w-4" />
+            )}
             {scraping ? "Scraping..." : "Scrape All Schools"}
           </Button>
           {scrapeProgress && (
-            <p className="text-sm text-muted-foreground mt-2">
-              {scrapeProgress}
-            </p>
+            <p className="text-sm text-muted-foreground mt-2">{scrapeProgress}</p>
           )}
         </div>
 
@@ -205,8 +211,7 @@ const AthleteFinder = () => {
             <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">No results found</h2>
             <p className="text-muted-foreground">
-              Try a different name or make sure the database has been populated
-              by scraping schools first.
+              Try a different name or make sure the database has been populated.
             </p>
           </div>
         )}
@@ -239,18 +244,14 @@ const AthleteFinder = () => {
                   <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-sm font-medium">
                     {r.level}
                   </span>
-                  <span className="text-muted-foreground text-sm">
-                    {r.season}
-                  </span>
+                  <span className="text-muted-foreground text-sm">{r.season}</span>
                   {r.grade && (
                     <span className="text-sm">
                       Grade: <strong>{r.grade}</strong>
                     </span>
                   )}
                   {r.jersey_number && (
-                    <span className="text-sm text-muted-foreground">
-                      #{r.jersey_number}
-                    </span>
+                    <span className="text-sm text-muted-foreground">#{r.jersey_number}</span>
                   )}
                 </div>
               ))}
@@ -258,6 +259,30 @@ const AthleteFinder = () => {
           </Card>
         ))}
       </div>
+
+      {/* Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Scrape Password</DialogTitle>
+          </DialogHeader>
+          <Input
+            type="password"
+            placeholder="Password..."
+            value={scrapePassword}
+            onChange={(e) => setScrapePassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleScrapeConfirm()}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleScrapeConfirm} disabled={!scrapePassword}>
+              Start Scraping
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
