@@ -63,7 +63,7 @@ const AthleteFinder = () => {
         .order("last_name")
         .order("first_name")
         .order("season", { ascending: false })
-        .eq("season", ["2025/2026", "2024/2025", "2023/2024", "2022/2023"])
+        .in("season", ["2025/2026", "2024/2025", "2023/2024", "2022/2023"])
         .limit(500);
 
       if (error) throw error;
