@@ -329,17 +329,28 @@ function extractSportAndLevel(html: string): { sport: string; level: string } {
   return { sport: parts.slice(0, -1).join(" - ").trim(), level };
 }
 
-async function fetchWithTimeout(url: string, timeout = 8000): Promise<string | null> {
+async function fetchWithTimeout(url: string, timeout = 8000, init?: RequestInit): Promise<Response | null> {
   try {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
-    const resp = await fetch(url, { signal: controller.signal });
+    const resp = await fetch(url, { ...init, signal: controller.signal });
     clearTimeout(id);
     if (!resp.ok) return null;
-    return await resp.text();
+    return resp;
   } catch {
     return null;
   }
+}
+
+function extractCookies(resp: Response): string {
+  const cookies: string[] = [];
+  resp.headers.forEach((v, k) => {
+    if (k.toLowerCase() === "set-cookie") {
+      const name = v.split(";")[0];
+      if (name) cookies.push(name);
+    }
+  });
+  return cookies.join("; ");
 }
 
 async function parallelMap<T, R>(items: T[], fn: (item: T) => Promise<R>, concurrency = 5): Promise<R[]> {
