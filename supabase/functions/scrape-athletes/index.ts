@@ -406,49 +406,52 @@ async function scrapeRosterBatch(
   const errors: string[] = [];
   let totalAthletes = 0;
   
-  // Process roster URLs with concurrency
   const results = await parallelMap(rosterUrls, async (rosterUrl) => {
     let athletes = 0;
     const errs: string[] = [];
     
-    const defaultHtml = await fetchWithTimeout(rosterUrl);
-    if (!defaultHtml) { errs.push(`Could not fetch ${rosterUrl}`); return { athletes, errors: errs }; }
-    
-    const { sport, level } = extractSportAndLevel(defaultHtml);
-    
     for (const seasonVal of SEASON_VALUES) {
       try {
-        let html = defaultHtml;
-        let season = extractSeason(defaultHtml);
+        // Fresh GET for each season to get cookies + viewstate
+        const initResp = await fetchWithTimeout(rosterUrl);
+        if (!initResp) { errs.push(`Could not fetch ${rosterUrl}`); break; }
         
-        // Check if default is already this season
-        const selectedMatch = defaultHtml.match(/<option[^>]+selected[^>]+value=["'](\d+)["']/i);
+        const initHtml = await initResp.text();
+        const cookies = extractCookies(initResp);
         
-        if (!selectedMatch || selectedMatch[1] !== seasonVal) {
-          // POST to switch season
-          const formFields = extractFormFields(defaultHtml);
+        // Check if current page is already on the desired season
+        const selectedMatch = initHtml.match(/<option[^>]+selected[^>]+value=["'](\d+)["']/i);
+        let html = initHtml;
+        
+        if (selectedMatch && selectedMatch[1] === seasonVal) {
+          // Already on correct season, use this HTML
+        } else {
+          // POST to switch season, forwarding cookies
+          const formFields = extractFormFields(initHtml);
           const formData = new URLSearchParams();
           for (const [k, v] of Object.entries(formFields)) formData.append(k, v);
           formData.set("ctl00$MainContent$ctl01$Seasonswitcher1$ddlSchoolYear", seasonVal);
           formData.set("ctl00$MainContent$ctl01$Seasonswitcher1$btnSwitch", "Go");
           
+          const headers: Record<string, string> = {
+            "Content-Type": "application/x-www-form-urlencoded",
+          };
+          if (cookies) headers["Cookie"] = cookies;
+          
           try {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), 8000);
-            const resp = await fetch(rosterUrl, {
+            const postResp = await fetchWithTimeout(rosterUrl, 10000, {
               method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              headers,
               body: formData.toString(),
-              signal: controller.signal,
               redirect: "follow",
             });
-            clearTimeout(id);
-            if (!resp.ok) continue;
-            html = await resp.text();
+            if (!postResp) continue;
+            html = await postResp.text();
           } catch { continue; }
         }
         
-        season = SEASON_LABELS[seasonVal] || extractSeason(html);
+        const season = SEASON_LABELS[seasonVal] || extractSeason(html);
+        const { sport, level } = extractSportAndLevel(html);
         const parsed = parseRosterTable(html);
         if (parsed.length === 0) continue;
         
@@ -468,7 +471,7 @@ async function scrapeRosterBatch(
         
         if (error) errs.push(`DB: ${sport} ${level} ${season}: ${error.message}`);
         else athletes += parsed.length;
-      } catch (e) { errs.push(`${rosterUrl} season ${seasonVal}: ${e.message}`); }
+      } catch (e) { errs.push(`${rosterUrl} season ${seasonVal}: ${(e as Error).message}`); }
     }
     
     return { athletes, errors: errs };
