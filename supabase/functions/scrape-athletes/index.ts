@@ -368,23 +368,23 @@ async function parallelMap<T, R>(items: T[], fn: (item: T) => Promise<R>, concur
 
 // Phase 1: Discover roster URLs for a school
 async function discoverRosters(school: { name: string; url: string }): Promise<string[]> {
-  const homeHtml = await fetchWithTimeout(school.url);
-  if (!homeHtml) return [];
+  const homeResp = await fetchWithTimeout(school.url);
+  if (!homeResp) return [];
+  const homeHtml = await homeResp.text();
   
   const links = extractLinks(homeHtml, school.url);
   const rosterLinks: string[] = [];
   
-  // Collect roster links from homepage
   for (const l of links) {
     if (/roster/i.test(l.text)) rosterLinks.push(l.href);
   }
   
-  // Find sport pages and visit them in parallel
   const sportUrls = [...new Set(links.filter(l => /page\d+/.test(l.href)).map(l => l.href))];
   
   const sportResults = await parallelMap(sportUrls, async (url) => {
-    const html = await fetchWithTimeout(url);
-    if (!html) return [];
+    const resp = await fetchWithTimeout(url);
+    if (!resp) return [];
+    const html = await resp.text();
     return extractLinks(html, school.url)
       .filter(l => /roster/i.test(l.text))
       .map(l => l.href);
