@@ -12,6 +12,7 @@ import ScoreboardControl from "./pages/ScoreboardControl";
 import ScoreboardDisplay from "./pages/ScoreboardDisplay";
 import Booking from "./pages/Booking";
 import Upload from "./pages/Upload";
+import Downloads from "./pages/Downloads";
 import AthleteFinder from "./pages/AthleteFinder";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/scoreboard" element={<ScoreboardDisplay />} />
           <Route path="/book" element={<Booking />} />
           <Route path="/upload" element={<Upload />} />
+          <Route path="/downloads" element={<Downloads />} />
           <Route path="/athlete-finder" element={<AthleteFinder />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

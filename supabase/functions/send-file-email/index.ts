@@ -7,6 +7,7 @@ const corsHeaders = {
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
 const RECIPIENT = "gr4yfx@gmail.com";
+const DOWNLOADS_URL = "https://id-preview--1a6c1c85-7a41-4609-9f19-9d462366abde.lovable.app/#/downloads";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,34 +15,20 @@ serve(async (req) => {
   }
 
   try {
-    const { attachments } = await req.json();
-
-    if (!attachments || !Array.isArray(attachments) || attachments.length === 0) {
-      return new Response(JSON.stringify({ error: "No attachments provided" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { sender, folder, files } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
-      return new Response(JSON.stringify({ error: "Server misconfigured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) {
-      console.error("RESEND_API_KEY not configured");
+    if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
       return new Response(JSON.stringify({ error: "Server misconfigured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const fileList = attachments.map((a: { filename: string }) => a.filename).join(", ");
+    const fileList = (files ?? [])
+      .map((f: { name: string; size: number }) => `<li>${f.name}</li>`)
+      .join("");
 
     const res = await fetch(`${GATEWAY_URL}/emails`, {
       method: "POST",
@@ -53,19 +40,26 @@ serve(async (req) => {
       body: JSON.stringify({
         from: "GrayFX Uploads <onboarding@resend.dev>",
         to: [RECIPIENT],
-        subject: `File Upload: ${attachments.length} file(s)`,
-        html: `<div style="font-family:Arial,sans-serif;padding:20px;"><h2>📁 New File Upload</h2><p>You received <strong>${attachments.length}</strong> file(s):</p><ul>${attachments.map((a: { filename: string }) => `<li>${a.filename}</li>`).join("")}</ul><p style="color:#999;font-size:12px;margin-top:20px;">Sent from your GrayFX upload form</p></div>`,
-        attachments: attachments.map((a: { filename: string; content: string }) => ({
-          filename: a.filename,
-          content: a.content,
-        })),
+        subject: `📁 New upload from ${sender ?? "Anonymous"} (${files?.length ?? 0} file(s))`,
+        html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;">
+          <h2>📁 New File Upload</h2>
+          <p><strong>${sender ?? "Anonymous"}</strong> uploaded <strong>${files?.length ?? 0}</strong> file(s).</p>
+          <p>Batch: <code>${folder}</code></p>
+          <ul>${fileList}</ul>
+          <p style="margin-top:24px;">
+            <a href="${DOWNLOADS_URL}" style="background:#000;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;display:inline-block;">
+              Download files →
+            </a>
+          </p>
+          <p style="color:#999;font-size:12px;margin-top:20px;">Files are stored at full quality. Open the downloads page and enter your password.</p>
+        </div>`,
       }),
     });
 
     const data = await res.json();
     if (!res.ok) {
       console.error("Resend gateway error:", JSON.stringify(data));
-      return new Response(JSON.stringify({ error: "Failed to send email" }), {
+      return new Response(JSON.stringify({ error: "Failed to send notification" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
