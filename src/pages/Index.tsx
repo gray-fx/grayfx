@@ -10,7 +10,7 @@ import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 const socialLinks = [
   { icon: Instagram, label: "Instagram", href: "https://www.instagram.com/gr4yfx" },
   { icon: Camera, label: "Legacy Pics", href: "https://grayflickz.myportfolio.com/" },
-  { icon: Mail, label: "Email", href: "mailto:gr4yfx@gmail.com" },
+  { icon: Mail, label: "Email", href: "mailto:grayson@grayfx.cam" },
 ];
 
 const Index = () => {
