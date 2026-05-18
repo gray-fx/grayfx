@@ -12,6 +12,27 @@ export interface StatEntry {
   timestamp: number;
 }
 
+export interface DisplayOptions {
+  showPeriod: boolean;
+  showClock: boolean;
+  showPossession: boolean;
+  showTimeouts: boolean;
+  showFouls: boolean;
+  showPlayerFouls: boolean;
+  showDownDistance: boolean;
+  showSOG: boolean;
+  showPIM: boolean;
+  showStoppage: boolean;
+  showStats: boolean;
+  showTenthsAlways: boolean;   // always show .t
+  showTenthsUnderMinute: boolean; // show .t when < 60s
+}
+
+export interface PlayerFoul {
+  player: string;
+  fouls: number;
+}
+
 export interface ScoreboardState {
   sport: SportType;
   homeTeam: string;
@@ -19,16 +40,26 @@ export interface ScoreboardState {
   homeScore: number;
   awayScore: number;
   period: number;
+  // Clock: ms is source of truth, clock string is editable display
+  clockMs: number;
   clock: string;
   clockRunning: boolean;
   homeTimeouts: number;
   awayTimeouts: number;
   possession: "home" | "away" | null;
+  // Football
   down: number;
   yardsToGo: number;
   ballOn: string;
+  flagOnPlay: boolean;
+  challengeTeam: "home" | "away" | null;
+  timeoutTeam: "home" | "away" | null;
+  // Basketball
   homeFouls: number;
   awayFouls: number;
+  homePlayerFouls: PlayerFoul[];
+  awayPlayerFouls: PlayerFoul[];
+  // Baseball
   inning: number;
   inningHalf: "top" | "bottom";
   outs: number;
@@ -36,14 +67,20 @@ export interface ScoreboardState {
   strikes: number;
   homeRuns: number[];
   awayRuns: number[];
+  // Hockey
   homePenaltyMinutes: number;
   awayPenaltyMinutes: number;
   homeShots: number;
   awayShots: number;
   homeSOG: number;
   awaySOG: number;
+  // Soccer
   stoppage: string;
+  // Stats
   statLog: StatEntry[];
+  autoScoreFromStats: boolean;
+  // Display
+  display: DisplayOptions;
 }
 
 export const SPORT_CONFIG: Record<SportType, { periods: number; periodName: string; defaultClock: string; timeoutsPerHalf: number }> = {
@@ -54,9 +91,75 @@ export const SPORT_CONFIG: Record<SportType, { periods: number; periodName: stri
   soccer: { periods: 2, periodName: "Half", defaultClock: "00:00", timeoutsPerHalf: 0 },
 };
 
+// Maps stat actions to score deltas (when autoScoreFromStats is on)
+export const SCORING_ACTIONS: Record<SportType, Record<string, number>> = {
+  football: { "Touchdown": 6, "Field Goal": 3, "Extra Point": 1, "2PT Conversion": 2, "Safety": 2 },
+  basketball: { "2PT Made": 2, "3PT Made": 3, "Free Throw": 1 },
+  baseball: { "Home Run": 1, "RBI": 1 },
+  hockey: { "Goal": 1, "Power Play Goal": 1 },
+  soccer: { "Goal": 1 },
+};
+
 const CHANNEL_NAME = "scoreboard-sync";
 
+function defaultDisplay(): DisplayOptions {
+  return {
+    showPeriod: true,
+    showClock: true,
+    showPossession: true,
+    showTimeouts: true,
+    showFouls: true,
+    showPlayerFouls: false,
+    showDownDistance: true,
+    showSOG: true,
+    showPIM: true,
+    showStoppage: true,
+    showStats: true,
+    showTenthsAlways: false,
+    showTenthsUnderMinute: true,
+  };
+}
+
+export function parseClockToMs(input: string): number {
+  if (!input) return 0;
+  const s = input.trim();
+  // mm:ss(.t)
+  const mmss = s.match(/^(\d+):(\d{1,2})(?:\.(\d))?$/);
+  if (mmss) {
+    const m = parseInt(mmss[1], 10);
+    const sec = parseInt(mmss[2], 10);
+    const t = mmss[3] ? parseInt(mmss[3], 10) : 0;
+    return (m * 60 + sec) * 1000 + t * 100;
+  }
+  // ss(.t)
+  const ss = s.match(/^(\d+)(?:\.(\d))?$/);
+  if (ss) {
+    const sec = parseInt(ss[1], 10);
+    const t = ss[2] ? parseInt(ss[2], 10) : 0;
+    return sec * 1000 + t * 100;
+  }
+  return 0;
+}
+
+export function formatClock(ms: number, opts: { showTenthsAlways: boolean; showTenthsUnderMinute: boolean }): string {
+  const totalMs = Math.max(0, ms);
+  const totalSec = totalMs / 1000;
+  const showTenths = opts.showTenthsAlways || (opts.showTenthsUnderMinute && totalSec < 60);
+  const wholeSec = Math.floor(totalSec);
+  const tenths = Math.floor((totalMs % 1000) / 100);
+  const m = Math.floor(wholeSec / 60);
+  const s = wholeSec % 60;
+  if (showTenths && totalSec < 60) {
+    return `${s}.${tenths}`;
+  }
+  if (showTenths) {
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${tenths}`;
+  }
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 export function getDefaultState(sport: SportType = "football"): ScoreboardState {
+  const ms = parseClockToMs(SPORT_CONFIG[sport].defaultClock || "00:00");
   return {
     sport,
     homeTeam: "HOME",
@@ -64,6 +167,7 @@ export function getDefaultState(sport: SportType = "football"): ScoreboardState 
     homeScore: 0,
     awayScore: 0,
     period: 1,
+    clockMs: ms,
     clock: SPORT_CONFIG[sport].defaultClock,
     clockRunning: false,
     homeTimeouts: SPORT_CONFIG[sport].timeoutsPerHalf,
@@ -72,8 +176,13 @@ export function getDefaultState(sport: SportType = "football"): ScoreboardState 
     down: 1,
     yardsToGo: 10,
     ballOn: "OWN 25",
+    flagOnPlay: false,
+    challengeTeam: null,
+    timeoutTeam: null,
     homeFouls: 0,
     awayFouls: 0,
+    homePlayerFouls: [],
+    awayPlayerFouls: [],
     inning: 1,
     inningHalf: "top",
     outs: 0,
@@ -89,26 +198,40 @@ export function getDefaultState(sport: SportType = "football"): ScoreboardState 
     awaySOG: 0,
     stoppage: "",
     statLog: [],
+    autoScoreFromStats: false,
+    display: defaultDisplay(),
   };
+}
+
+function migrate(s: any): ScoreboardState {
+  const base = getDefaultState(s?.sport || "football");
+  // Merge nested display
+  const display = { ...base.display, ...(s?.display || {}) };
+  const merged: ScoreboardState = { ...base, ...s, display };
+  if (typeof merged.clockMs !== "number") {
+    merged.clockMs = parseClockToMs(merged.clock || base.clock);
+  }
+  return merged;
 }
 
 export function useScoreboard(isController: boolean) {
   const [state, setState] = useState<ScoreboardState>(() => {
     const saved = localStorage.getItem("scoreboard-state");
     if (saved) {
-      try { return JSON.parse(saved); } catch { /* ignore */ }
+      try { return migrate(JSON.parse(saved)); } catch { /* ignore */ }
     }
     return getDefaultState();
   });
 
   const channelRef = useRef<BroadcastChannel | null>(null);
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastTickRef = useRef<number>(0);
 
   useEffect(() => {
     channelRef.current = new BroadcastChannel(CHANNEL_NAME);
     if (!isController) {
       channelRef.current.onmessage = (e) => {
-        setState(e.data);
+        setState(migrate(e.data));
       };
     }
     return () => { channelRef.current?.close(); };
@@ -121,41 +244,45 @@ export function useScoreboard(isController: boolean) {
 
   const update = useCallback((partial: Partial<ScoreboardState>) => {
     setState((prev) => {
-      const next = { ...prev, ...partial };
+      const next = { ...prev, ...partial } as ScoreboardState;
+      // If clock string was edited, recompute ms
+      if (partial.clock !== undefined && partial.clockMs === undefined) {
+        next.clockMs = parseClockToMs(partial.clock);
+      }
+      // If ms was edited, recompute string
+      if (partial.clockMs !== undefined && partial.clock === undefined) {
+        next.clock = formatClock(next.clockMs, next.display);
+      }
       broadcast(next);
       return next;
     });
   }, [broadcast]);
 
-  // Clock logic
+  // High-precision clock loop (100ms tick)
   useEffect(() => {
     if (clockRef.current) clearInterval(clockRef.current);
     if (!state.clockRunning || !isController) return;
-
     const isSoccer = state.sport === "soccer";
+    lastTickRef.current = performance.now();
 
     clockRef.current = setInterval(() => {
       setState((prev) => {
         if (!prev.clockRunning) return prev;
-        const [m, s] = prev.clock.split(":").map(Number);
-        const totalSec = m * 60 + s;
-
-        let newTotal: number;
-        if (isSoccer) {
-          newTotal = totalSec + 1; // count up
-        } else {
-          if (totalSec <= 0) return { ...prev, clockRunning: false };
-          newTotal = totalSec - 1; // count down
+        const now = performance.now();
+        const dt = now - lastTickRef.current;
+        lastTickRef.current = now;
+        let newMs = isSoccer ? prev.clockMs + dt : prev.clockMs - dt;
+        if (!isSoccer && newMs <= 0) {
+          newMs = 0;
+          const stopped = { ...prev, clockMs: 0, clock: formatClock(0, prev.display), clockRunning: false };
+          broadcast(stopped);
+          return stopped;
         }
-
-        const newMin = Math.floor(newTotal / 60);
-        const newSec = newTotal % 60;
-        const newClock = `${String(newMin).padStart(2, "0")}:${String(newSec).padStart(2, "0")}`;
-        const next = { ...prev, clock: newClock };
+        const next = { ...prev, clockMs: newMs, clock: formatClock(newMs, prev.display) };
         broadcast(next);
         return next;
       });
-    }, 1000);
+    }, 100);
 
     return () => { if (clockRef.current) clearInterval(clockRef.current); };
   }, [state.clockRunning, state.sport, isController, broadcast]);
