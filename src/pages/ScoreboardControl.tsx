@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { useScoreboard, SPORT_CONFIG, getDefaultState, type SportType, type StatEntry } from "@/hooks/use-scoreboard";
+import { useScoreboard, SPORT_CONFIG, SCORING_ACTIONS, formatClock, getDefaultState, type SportType, type StatEntry, type DisplayOptions } from "@/hooks/use-scoreboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Minus, Play, Pause, RotateCcw, ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
+import { Plus, Minus, Play, Pause, RotateCcw, ArrowLeft, ExternalLink, Trash2, Flag, AlertTriangle, Hand } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const SPORT_ACTIONS: Record<SportType, string[]> = {
@@ -24,12 +26,10 @@ const ScoreboardControl = () => {
   const [statTeam, setStatTeam] = useState<"home" | "away">("home");
   const [statPlayer, setStatPlayer] = useState("");
   const [statAction, setStatAction] = useState("");
+  const [foulTeam, setFoulTeam] = useState<"home" | "away">("home");
+  const [foulPlayer, setFoulPlayer] = useState("");
 
-  const changeSport = (sport: SportType) => {
-    const fresh = getDefaultState(sport);
-    update(fresh);
-  };
-
+  const changeSport = (sport: SportType) => update(getDefaultState(sport));
   const resetGame = () => update(getDefaultState(state.sport));
 
   const addStat = () => {
@@ -43,15 +43,33 @@ const ScoreboardControl = () => {
       clock: state.sport === "baseball" ? `${state.inningHalf === "top" ? "▲" : "▼"}${state.inning}` : state.clock,
       timestamp: Date.now(),
     };
-    update({ statLog: [...state.statLog, entry] });
+    const delta = state.autoScoreFromStats ? (SCORING_ACTIONS[state.sport]?.[statAction] || 0) : 0;
+    const scoreKey = statTeam === "home" ? "homeScore" : "awayScore";
+    update({ statLog: [...state.statLog, entry], ...(delta ? { [scoreKey]: state[scoreKey] + delta } : {}) });
     setStatPlayer("");
   };
 
-  const removeStat = (id: string) => {
-    update({ statLog: state.statLog.filter((s) => s.id !== id) });
+  const removeStat = (id: string) => update({ statLog: state.statLog.filter((s) => s.id !== id) });
+  const clearStats = () => update({ statLog: [] });
+
+  const addPlayerFoul = () => {
+    if (!foulPlayer.trim()) return;
+    const key = foulTeam === "home" ? "homePlayerFouls" : "awayPlayerFouls";
+    const teamFoulsKey = foulTeam === "home" ? "homeFouls" : "awayFouls";
+    const list = [...state[key]];
+    const idx = list.findIndex((p) => p.player.toLowerCase() === foulPlayer.trim().toLowerCase());
+    if (idx >= 0) list[idx] = { ...list[idx], fouls: list[idx].fouls + 1 };
+    else list.push({ player: foulPlayer.trim(), fouls: 1 });
+    update({ [key]: list, [teamFoulsKey]: state[teamFoulsKey] + 1 });
+    setFoulPlayer("");
   };
 
-  const clearStats = () => update({ statLog: [] });
+  const removePlayerFoul = (team: "home" | "away", player: string) => {
+    const key = team === "home" ? "homePlayerFouls" : "awayPlayerFouls";
+    update({ [key]: state[key].filter((p) => p.player !== player) });
+  };
+
+  const setDisplayOpt = (k: keyof DisplayOptions, v: boolean) => update({ display: { ...state.display, [k]: v } });
 
   const ScoreControl = ({ side, label }: { side: "home" | "away"; label: string }) => {
     const scoreKey = side === "home" ? "homeScore" : "awayScore";
@@ -64,27 +82,17 @@ const ScoreboardControl = () => {
 
     return (
       <Card className="flex-1">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-display">{label}</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-lg font-display">{label}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <Input
-            value={state[teamKey]}
-            onChange={(e) => update({ [teamKey]: e.target.value.toUpperCase() })}
-            className="text-center font-display font-bold"
-          />
-          <div className="text-center">
-            <span className="text-4xl font-display font-bold text-primary">{state[scoreKey]}</span>
-          </div>
+          <Input value={state[teamKey]} onChange={(e) => update({ [teamKey]: e.target.value.toUpperCase() })} className="text-center font-display font-bold" />
+          <div className="text-center"><span className="text-4xl font-display font-bold text-primary">{state[scoreKey]}</span></div>
           <div className="flex flex-wrap gap-1 justify-center">
             {scoreIncrements.map((n) => (
               <Button key={n} size="sm" onClick={() => update({ [scoreKey]: state[scoreKey] + n })}>+{n}</Button>
             ))}
           </div>
           <div className="flex gap-1 justify-center">
-            <Button size="sm" variant="outline" onClick={() => update({ [scoreKey]: Math.max(0, state[scoreKey] - 1) })}>
-              <Minus className="h-3 w-3" />
-            </Button>
+            <Button size="sm" variant="outline" onClick={() => update({ [scoreKey]: Math.max(0, state[scoreKey] - 1) })}><Minus className="h-3 w-3" /></Button>
             <Button size="sm" variant="outline" onClick={() => update({ [scoreKey]: 0 })}>Reset</Button>
           </div>
 
@@ -92,11 +100,14 @@ const ScoreboardControl = () => {
             <div className="pt-2">
               <span className="text-xs text-muted-foreground">Timeouts: {state[toKey]}</span>
               <div className="flex gap-1 mt-1">
-                <Button size="sm" variant="secondary" onClick={() => update({ [toKey]: Math.max(0, state[toKey] - 1) })}>
-                  <Minus className="h-3 w-3" /> TO
-                </Button>
-                <Button size="sm" variant="secondary" onClick={() => update({ [toKey]: state[toKey] + 1 })}>
-                  <Plus className="h-3 w-3" /> TO
+                <Button size="sm" variant="secondary" onClick={() => update({ [toKey]: Math.max(0, state[toKey] - 1) })}><Minus className="h-3 w-3" /> TO</Button>
+                <Button size="sm" variant="secondary" onClick={() => update({ [toKey]: state[toKey] + 1 })}><Plus className="h-3 w-3" /> TO</Button>
+                <Button
+                  size="sm"
+                  variant={state.timeoutTeam === side ? "default" : "outline"}
+                  onClick={() => update({ timeoutTeam: state.timeoutTeam === side ? null : side })}
+                >
+                  <Hand className="h-3 w-3 mr-1" />{state.timeoutTeam === side ? "End TO" : "Call TO"}
                 </Button>
               </div>
             </div>
@@ -104,26 +115,16 @@ const ScoreboardControl = () => {
 
           {state.sport === "basketball" && (
             <div className="pt-2">
-              <span className="text-xs text-muted-foreground">Fouls: {state[foulsKey]}</span>
+              <span className="text-xs text-muted-foreground">Team Fouls: {state[foulsKey]}</span>
               <div className="flex gap-1 mt-1">
-                <Button size="sm" variant="secondary" onClick={() => update({ [foulsKey]: Math.max(0, state[foulsKey] - 1) })}>
-                  <Minus className="h-3 w-3" />
-                </Button>
-                <Button size="sm" variant="secondary" onClick={() => update({ [foulsKey]: state[foulsKey] + 1 })}>
-                  <Plus className="h-3 w-3" />
-                </Button>
+                <Button size="sm" variant="secondary" onClick={() => update({ [foulsKey]: Math.max(0, state[foulsKey] - 1) })}><Minus className="h-3 w-3" /></Button>
+                <Button size="sm" variant="secondary" onClick={() => update({ [foulsKey]: state[foulsKey] + 1 })}><Plus className="h-3 w-3" /></Button>
               </div>
             </div>
           )}
 
-          <Button
-            size="sm"
-            variant={state.possession === side ? "default" : "outline"}
-            className="w-full"
-            onClick={() => update({ possession: state.possession === side ? null : side })}
-          >
-            Possession
-          </Button>
+          <Button size="sm" variant={state.possession === side ? "default" : "outline"} className="w-full"
+            onClick={() => update({ possession: state.possession === side ? null : side })}>Possession</Button>
         </CardContent>
       </Card>
     );
@@ -133,25 +134,18 @@ const ScoreboardControl = () => {
     <div className="min-h-screen bg-background p-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <Link to="/">
-            <Button variant="ghost" size="icon"><ArrowLeft /></Button>
-          </Link>
+          <Link to="/"><Button variant="ghost" size="icon"><ArrowLeft /></Button></Link>
           <h1 className="text-2xl font-display font-bold text-foreground">Scoreboard Control</h1>
         </div>
         <Link to="/scoreboard" target="_blank">
-          <Button variant="outline" size="sm">
-            <ExternalLink className="h-3 w-3 mr-1" /> Open Display
-          </Button>
+          <Button variant="outline" size="sm"><ExternalLink className="h-3 w-3 mr-1" /> Open Display</Button>
         </Link>
       </div>
 
-      {/* Sport Selector */}
       <Card className="mb-4">
         <CardContent className="p-4 flex items-center gap-4 flex-wrap">
           <Select value={state.sport} onValueChange={(v) => changeSport(v as SportType)}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="football">🏈 Football</SelectItem>
               <SelectItem value="basketball">🏀 Basketball</SelectItem>
@@ -160,13 +154,10 @@ const ScoreboardControl = () => {
               <SelectItem value="soccer">⚽ Soccer</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="destructive" size="sm" onClick={resetGame}>
-            <RotateCcw className="h-3 w-3 mr-1" /> Reset Game
-          </Button>
+          <Button variant="destructive" size="sm" onClick={resetGame}><RotateCcw className="h-3 w-3 mr-1" /> Reset Game</Button>
         </CardContent>
       </Card>
 
-      {/* Team Controls */}
       <div className="flex gap-4 mb-4">
         <ScoreControl side="home" label="Home" />
         <ScoreControl side="away" label="Away" />
@@ -175,147 +166,118 @@ const ScoreboardControl = () => {
       {/* Clock & Period */}
       {state.sport !== "baseball" && (
         <Card className="mb-4">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-display">Clock & {config.periodName}</CardTitle>
-          </CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-lg font-display">Clock & {config.periodName}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Input
-                value={state.clock}
-                onChange={(e) => update({ clock: e.target.value })}
-                className="text-center font-mono text-2xl w-32"
-              />
+            <div className="flex items-center gap-3 flex-wrap">
+              <Input value={state.clock} onChange={(e) => update({ clock: e.target.value })} className="text-center font-mono text-2xl w-36" placeholder="MM:SS.t" />
               <Button onClick={() => update({ clockRunning: !state.clockRunning })} variant={state.clockRunning ? "destructive" : "default"}>
                 {state.clockRunning ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
                 {state.clockRunning ? "Stop" : "Start"}
               </Button>
-              <Button variant="outline" onClick={() => update({ clock: config.defaultClock })}>
-                Reset Clock
-              </Button>
+              <Button variant="outline" onClick={() => update({ clock: config.defaultClock })}>Reset Clock</Button>
+              <span className="text-xs text-muted-foreground font-mono">internal: {(state.clockMs / 1000).toFixed(1)}s</span>
+            </div>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Switch id="tenthsUnder" checked={state.display.showTenthsUnderMinute} onCheckedChange={(v) => setDisplayOpt("showTenthsUnderMinute", v)} />
+                <Label htmlFor="tenthsUnder" className="text-xs">Show tenths under 1:00</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="tenthsAlways" checked={state.display.showTenthsAlways} onCheckedChange={(v) => setDisplayOpt("showTenthsAlways", v)} />
+                <Label htmlFor="tenthsAlways" className="text-xs">Always show tenths</Label>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">{config.periodName}:</span>
-              <Button size="sm" variant="outline" onClick={() => update({ period: Math.max(1, state.period - 1) })}>
-                <Minus className="h-3 w-3" />
-              </Button>
+              <Button size="sm" variant="outline" onClick={() => update({ period: Math.max(1, state.period - 1) })}><Minus className="h-3 w-3" /></Button>
               <span className="font-display font-bold text-lg w-8 text-center">{state.period}</span>
-              <Button size="sm" variant="outline" onClick={() => update({ period: state.period + 1 })}>
-                <Plus className="h-3 w-3" />
-              </Button>
+              <Button size="sm" variant="outline" onClick={() => update({ period: state.period + 1 })}><Plus className="h-3 w-3" /></Button>
             </div>
             {state.sport === "soccer" && (
-              <Input
-                placeholder="Stoppage time (e.g. +3)"
-                value={state.stoppage}
-                onChange={(e) => update({ stoppage: e.target.value })}
-                className="w-40"
-              />
+              <Input placeholder="Stoppage time (e.g. +3)" value={state.stoppage} onChange={(e) => update({ stoppage: e.target.value })} className="w-40" />
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Football-specific */}
+      {/* Football */}
       {state.sport === "football" && (
         <Card className="mb-4">
-          <CardHeader className="pb-3"><CardTitle className="text-lg font-display">Down & Distance</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-lg font-display">Football Controls</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">Down:</span>
               {[1, 2, 3, 4].map((d) => (
-                <Button key={d} size="sm" variant={state.down === d ? "default" : "outline"} onClick={() => update({ down: d })}>
-                  {d}
-                </Button>
+                <Button key={d} size="sm" variant={state.down === d ? "default" : "outline"} onClick={() => update({ down: d })}>{d}</Button>
               ))}
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">To Go:</span>
-              <Input
-                type="number"
-                value={state.yardsToGo}
-                onChange={(e) => update({ yardsToGo: parseInt(e.target.value) || 0 })}
-                className="w-20 text-center"
-              />
+              <Input type="number" value={state.yardsToGo} onChange={(e) => update({ yardsToGo: parseInt(e.target.value) || 0 })} className="w-20 text-center" />
+              <span className="text-sm text-muted-foreground ml-4">Ball On:</span>
+              <Input value={state.ballOn} onChange={(e) => update({ ballOn: e.target.value.toUpperCase() })} className="w-32 text-center" />
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Ball On:</span>
-              <Input
-                value={state.ballOn}
-                onChange={(e) => update({ ballOn: e.target.value.toUpperCase() })}
-                className="w-32 text-center"
-              />
+            <Separator />
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button size="sm" variant={state.flagOnPlay ? "destructive" : "outline"} onClick={() => update({ flagOnPlay: !state.flagOnPlay })}>
+                <Flag className="h-3 w-3 mr-1" />{state.flagOnPlay ? "Clear Flag" : "Flag on Play"}
+              </Button>
+              <Button size="sm" variant={state.challengeTeam === "home" ? "default" : "outline"}
+                onClick={() => update({ challengeTeam: state.challengeTeam === "home" ? null : "home" })}>
+                <AlertTriangle className="h-3 w-3 mr-1" />Home Challenge
+              </Button>
+              <Button size="sm" variant={state.challengeTeam === "away" ? "default" : "outline"}
+                onClick={() => update({ challengeTeam: state.challengeTeam === "away" ? null : "away" })}>
+                <AlertTriangle className="h-3 w-3 mr-1" />Away Challenge
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Baseball-specific */}
+      {/* Baseball */}
       {state.sport === "baseball" && (
         <Card className="mb-4">
           <CardHeader className="pb-3"><CardTitle className="text-lg font-display">Baseball Controls</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">Inning:</span>
-              <Button size="sm" variant={state.inningHalf === "top" ? "default" : "outline"} onClick={() => update({ inningHalf: "top" })}>
-                ▲ Top
-              </Button>
-              <Button size="sm" variant={state.inningHalf === "bottom" ? "default" : "outline"} onClick={() => update({ inningHalf: "bottom" })}>
-                ▼ Bot
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => update({ inning: Math.max(1, state.inning - 1) })}>
-                <Minus className="h-3 w-3" />
-              </Button>
+              <Button size="sm" variant={state.inningHalf === "top" ? "default" : "outline"} onClick={() => update({ inningHalf: "top" })}>▲ Top</Button>
+              <Button size="sm" variant={state.inningHalf === "bottom" ? "default" : "outline"} onClick={() => update({ inningHalf: "bottom" })}>▼ Bot</Button>
+              <Button size="sm" variant="outline" onClick={() => update({ inning: Math.max(1, state.inning - 1) })}><Minus className="h-3 w-3" /></Button>
               <span className="font-bold text-lg w-8 text-center">{state.inning}</span>
-              <Button size="sm" variant="outline" onClick={() => update({ inning: state.inning + 1 })}>
-                <Plus className="h-3 w-3" />
-              </Button>
+              <Button size="sm" variant="outline" onClick={() => update({ inning: state.inning + 1 })}><Plus className="h-3 w-3" /></Button>
             </div>
             <Separator />
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">Outs:</span>
-              {[0, 1, 2, 3].map((o) => (
-                <Button key={o} size="sm" variant={state.outs === o ? "default" : "outline"} onClick={() => update({ outs: o })}>
-                  {o}
-                </Button>
-              ))}
+              {[0, 1, 2, 3].map((o) => (<Button key={o} size="sm" variant={state.outs === o ? "default" : "outline"} onClick={() => update({ outs: o })}>{o}</Button>))}
             </div>
             <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Balls:</span>
-                {[0, 1, 2, 3].map((b) => (
-                  <Button key={b} size="sm" variant={state.balls === b ? "default" : "outline"} onClick={() => update({ balls: b })}>
-                    {b}
-                  </Button>
-                ))}
+              <div className="flex items-center gap-2"><span className="text-sm text-muted-foreground">Balls:</span>
+                {[0, 1, 2, 3].map((b) => (<Button key={b} size="sm" variant={state.balls === b ? "default" : "outline"} onClick={() => update({ balls: b })}>{b}</Button>))}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Strikes:</span>
-                {[0, 1, 2].map((s) => (
-                  <Button key={s} size="sm" variant={state.strikes === s ? "default" : "outline"} onClick={() => update({ strikes: s })}>
-                    {s}
-                  </Button>
-                ))}
+              <div className="flex items-center gap-2"><span className="text-sm text-muted-foreground">Strikes:</span>
+                {[0, 1, 2].map((s) => (<Button key={s} size="sm" variant={state.strikes === s ? "default" : "outline"} onClick={() => update({ strikes: s })}>{s}</Button>))}
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Hockey-specific */}
+      {/* Hockey */}
       {state.sport === "hockey" && (
         <Card className="mb-4">
           <CardHeader className="pb-3"><CardTitle className="text-lg font-display">Hockey Stats</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="flex gap-8">
-              <div>
-                <span className="text-xs text-muted-foreground">Home SOG: {state.homeSOG}</span>
+              <div><span className="text-xs text-muted-foreground">Home SOG: {state.homeSOG}</span>
                 <div className="flex gap-1 mt-1">
                   <Button size="sm" variant="outline" onClick={() => update({ homeSOG: Math.max(0, state.homeSOG - 1) })}><Minus className="h-3 w-3" /></Button>
                   <Button size="sm" variant="outline" onClick={() => update({ homeSOG: state.homeSOG + 1 })}><Plus className="h-3 w-3" /></Button>
                 </div>
               </div>
-              <div>
-                <span className="text-xs text-muted-foreground">Away SOG: {state.awaySOG}</span>
+              <div><span className="text-xs text-muted-foreground">Away SOG: {state.awaySOG}</span>
                 <div className="flex gap-1 mt-1">
                   <Button size="sm" variant="outline" onClick={() => update({ awaySOG: Math.max(0, state.awaySOG - 1) })}><Minus className="h-3 w-3" /></Button>
                   <Button size="sm" variant="outline" onClick={() => update({ awaySOG: state.awaySOG + 1 })}><Plus className="h-3 w-3" /></Button>
@@ -323,16 +285,14 @@ const ScoreboardControl = () => {
               </div>
             </div>
             <div className="flex gap-8">
-              <div>
-                <span className="text-xs text-muted-foreground">Home PIM: {state.homePenaltyMinutes}</span>
+              <div><span className="text-xs text-muted-foreground">Home PIM: {state.homePenaltyMinutes}</span>
                 <div className="flex gap-1 mt-1">
                   <Button size="sm" variant="outline" onClick={() => update({ homePenaltyMinutes: Math.max(0, state.homePenaltyMinutes - 2) })}>-2</Button>
                   <Button size="sm" variant="outline" onClick={() => update({ homePenaltyMinutes: state.homePenaltyMinutes + 2 })}>+2</Button>
                   <Button size="sm" variant="outline" onClick={() => update({ homePenaltyMinutes: state.homePenaltyMinutes + 5 })}>+5</Button>
                 </div>
               </div>
-              <div>
-                <span className="text-xs text-muted-foreground">Away PIM: {state.awayPenaltyMinutes}</span>
+              <div><span className="text-xs text-muted-foreground">Away PIM: {state.awayPenaltyMinutes}</span>
                 <div className="flex gap-1 mt-1">
                   <Button size="sm" variant="outline" onClick={() => update({ awayPenaltyMinutes: Math.max(0, state.awayPenaltyMinutes - 2) })}>-2</Button>
                   <Button size="sm" variant="outline" onClick={() => update({ awayPenaltyMinutes: state.awayPenaltyMinutes + 2 })}>+2</Button>
@@ -344,103 +304,143 @@ const ScoreboardControl = () => {
         </Card>
       )}
 
+      {/* Basketball Player Fouls */}
+      {state.sport === "basketball" && (
+        <Card className="mb-4">
+          <CardHeader className="pb-3"><CardTitle className="text-lg font-display">Player Fouls</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2 items-end flex-wrap">
+              <div className="space-y-1"><span className="text-xs text-muted-foreground">Team</span>
+                <Select value={foulTeam} onValueChange={(v) => setFoulTeam(v as "home" | "away")}>
+                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="home">{state.homeTeam}</SelectItem>
+                    <SelectItem value="away">{state.awayTeam}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1"><span className="text-xs text-muted-foreground">Player</span>
+                <Input value={foulPlayer} onChange={(e) => setFoulPlayer(e.target.value)} placeholder="#0 Name" className="w-36" onKeyDown={(e) => e.key === "Enter" && addPlayerFoul()} />
+              </div>
+              <Button onClick={addPlayerFoul} disabled={!foulPlayer.trim()}><Plus className="h-4 w-4 mr-1" />Foul</Button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {(["home", "away"] as const).map((side) => {
+                const list = side === "home" ? state.homePlayerFouls : state.awayPlayerFouls;
+                return (
+                  <div key={side} className="space-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground">{side === "home" ? state.homeTeam : state.awayTeam}</div>
+                    {list.length === 0 && <div className="text-xs text-muted-foreground">No fouls</div>}
+                    {list.map((p) => (
+                      <div key={p.player} className="flex items-center justify-between text-sm bg-secondary px-2 py-1 rounded">
+                        <span>{p.player}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-bold ${p.fouls >= 5 ? "text-destructive" : ""}`}>{p.fouls}</span>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => removePlayerFoul(side, p.player)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Display Options */}
+      <Card className="mb-4">
+        <CardHeader className="pb-3"><CardTitle className="text-lg font-display">Display Options</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {([
+              ["showPeriod", "Period"],
+              ["showClock", "Clock"],
+              ["showPossession", "Possession"],
+              ["showTimeouts", "Timeouts"],
+              ["showFouls", "Team Fouls"],
+              ["showPlayerFouls", "Player Fouls"],
+              ["showDownDistance", "Down & Distance"],
+              ["showSOG", "Shots on Goal"],
+              ["showPIM", "Penalty Min"],
+              ["showStoppage", "Stoppage Time"],
+              ["showStats", "Live Stat Feed"],
+            ] as const).map(([k, label]) => (
+              <div key={k} className="flex items-center gap-2">
+                <Switch id={k} checked={state.display[k]} onCheckedChange={(v) => setDisplayOpt(k, v)} />
+                <Label htmlFor={k} className="text-sm">{label}</Label>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stat Logger */}
       <Card className="mb-4">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-display">Stat Logger</CardTitle>
             {state.statLog.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearStats} className="text-destructive">
-                <Trash2 className="h-3 w-3 mr-1" /> Clear All
-              </Button>
+              <Button variant="ghost" size="sm" onClick={clearStats} className="text-destructive"><Trash2 className="h-3 w-3 mr-1" /> Clear All</Button>
             )}
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Switch id="autoScore" checked={state.autoScoreFromStats} onCheckedChange={(v) => update({ autoScoreFromStats: v })} />
+            <Label htmlFor="autoScore" className="text-sm">Auto-update score from scoring stats (TD=+6, FG=+3, 3PT=+3, etc.)</Label>
+          </div>
           <div className="flex flex-wrap gap-2 items-end">
-            <div className="space-y-1">
-              <span className="text-xs text-muted-foreground">Team</span>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">Team</span>
               <Select value={statTeam} onValueChange={(v) => setStatTeam(v as "home" | "away")}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="home">{state.homeTeam}</SelectItem>
                   <SelectItem value="away">{state.awayTeam}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <span className="text-xs text-muted-foreground">Player</span>
-              <Input
-                value={statPlayer}
-                onChange={(e) => setStatPlayer(e.target.value)}
-                placeholder="#0 Name"
-                className="w-36"
-                onKeyDown={(e) => e.key === "Enter" && addStat()}
-              />
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">Player</span>
+              <Input value={statPlayer} onChange={(e) => setStatPlayer(e.target.value)} placeholder="#0 Name" className="w-36" onKeyDown={(e) => e.key === "Enter" && addStat()} />
             </div>
-            <div className="space-y-1">
-              <span className="text-xs text-muted-foreground">Action</span>
+            <div className="space-y-1"><span className="text-xs text-muted-foreground">Action</span>
               <Select value={statAction} onValueChange={setStatAction}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
+                <SelectTrigger className="w-40"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
-                  {SPORT_ACTIONS[state.sport].map((a) => (
-                    <SelectItem key={a} value={a}>{a}</SelectItem>
-                  ))}
+                  {SPORT_ACTIONS[state.sport].map((a) => {
+                    const pts = SCORING_ACTIONS[state.sport]?.[a];
+                    return <SelectItem key={a} value={a}>{a}{pts ? ` (+${pts})` : ""}</SelectItem>;
+                  })}
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={addStat} disabled={!statPlayer.trim() || !statAction}>
-              <Plus className="h-4 w-4 mr-1" /> Log
-            </Button>
+            <Button onClick={addStat} disabled={!statPlayer.trim() || !statAction}><Plus className="h-4 w-4 mr-1" /> Log</Button>
           </div>
 
-          {/* Quick action buttons */}
           <div className="flex flex-wrap gap-1">
             {SPORT_ACTIONS[state.sport].slice(0, 6).map((a) => (
-              <Button
-                key={a}
-                size="sm"
-                variant={statAction === a ? "default" : "secondary"}
-                onClick={() => setStatAction(a)}
-              >
-                {a}
-              </Button>
+              <Button key={a} size="sm" variant={statAction === a ? "default" : "secondary"} onClick={() => setStatAction(a)}>{a}</Button>
             ))}
           </div>
 
           <Separator />
 
-          {/* Stat Log Table */}
           {state.statLog.length > 0 ? (
             <div className="max-h-64 overflow-y-auto">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-16">Time</TableHead>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Player</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
+                <TableHeader><TableRow>
+                  <TableHead className="w-16">Time</TableHead><TableHead>Team</TableHead><TableHead>Player</TableHead><TableHead>Action</TableHead><TableHead className="w-10"></TableHead>
+                </TableRow></TableHeader>
                 <TableBody>
                   {[...state.statLog].reverse().map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell className="font-mono text-xs text-muted-foreground">{entry.clock}</TableCell>
-                      <TableCell className="text-xs font-semibold">
-                        {entry.team === "home" ? state.homeTeam : state.awayTeam}
-                      </TableCell>
+                      <TableCell className="text-xs font-semibold">{entry.team === "home" ? state.homeTeam : state.awayTeam}</TableCell>
                       <TableCell className="text-sm">{entry.player}</TableCell>
                       <TableCell className="text-sm font-medium">{entry.action}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeStat(entry.id)}>
-                          <Trash2 className="h-3 w-3 text-muted-foreground" />
-                        </Button>
-                      </TableCell>
+                      <TableCell><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeStat(entry.id)}><Trash2 className="h-3 w-3 text-muted-foreground" /></Button></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
