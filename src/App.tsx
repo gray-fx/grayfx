@@ -14,6 +14,8 @@ import Booking from "./pages/Booking";
 import Upload from "./pages/Upload";
 import Downloads from "./pages/Downloads";
 import AthleteFinder from "./pages/AthleteFinder";
+import DAS5000Control from "./pages/DAS5000Control";
+import DAS5000Display from "./pages/DAS5000Display";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,8 @@ const App = () => (
           <Route path="/upload" element={<Upload />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/athlete-finder" element={<AthleteFinder />} />
+          <Route path="/das5000-control" element={<DAS5000Control />} />
+          <Route path="/das5000" element={<DAS5000Display />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
