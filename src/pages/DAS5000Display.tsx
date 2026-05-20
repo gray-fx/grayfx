@@ -28,7 +28,7 @@ export default function DAS5000Display() {
   }, [state.hornAt]);
 
   const RED = "#ff2a2a";
-  const AMBER = "#ffb800";
+  const AMBER = "#ffffff";
   const GREEN = "#1cff5a";
 
   const Label = ({ children, className = "" }: any) => (
