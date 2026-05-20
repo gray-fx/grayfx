@@ -87,6 +87,7 @@ export default function DAS5000Control() {
         "t": "TOL", "b": "BONUS",
         "n": "HORN",
         "s": "SHOT START", "S": "SHOT STOP",
+        "b": "SHOT 14", "b": "SHOT 30",
       };
       if (map[k]) { e.preventDefault(); press(map[k]); }
     };
