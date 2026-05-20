@@ -2,6 +2,20 @@ import { useDAS5000, formatClock } from "@/hooks/use-das5000";
 import { SevenSegNumber, SegText } from "@/components/das5000/SevenSeg";
 import { useEffect, useState } from "react";
 
+// Inject Barlow Condensed Black from Google Fonts once
+if (typeof document !== "undefined") {
+  const id = "barlow-condensed-font";
+  if (!document.getElementById(id)) {
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&display=swap";
+    document.head.appendChild(link);
+  }
+}
+
+const LABEL_FONT = "'Barlow Condensed', 'Arial Narrow', sans-serif";
+
 export default function DAS5000Display() {
   const { state } = useDAS5000(false);
   const clockStr = formatClock(state.clockMs, state.showTenthsUnder60);
@@ -18,8 +32,15 @@ export default function DAS5000Display() {
   const GREEN = "#1cff5a";
 
   const Label = ({ children, className = "" }: any) => (
-    <div className={`text-yellow-300 font-black tracking-widest text-center uppercase ${className}`}
-      style={{ fontFamily: "Impact, 'Arial Black', sans-serif", textShadow: "0 0 8px rgba(255,184,0,0.4)" }}>
+    <div
+      className={`text-yellow-300 tracking-wider text-center uppercase ${className}`}
+      style={{
+        fontFamily: LABEL_FONT,
+        fontWeight: 900,
+        textShadow: "0 0 8px rgba(255,184,0,0.4)",
+        letterSpacing: "0.06em",
+      }}
+    >
       {children}
     </div>
   );
@@ -81,7 +102,7 @@ export default function DAS5000Display() {
           <div className="text-center"><Label className="text-base">Fouls</Label><SevenSegNumber value={state.homeFouls} digits={2} height={50} color={AMBER} /></div>
           <div className="text-center"><Label className="text-base">TOL</Label><SevenSegNumber value={state.homeTOL} digits={1} height={50} color={GREEN} /></div>
         </div>
-        <div className="text-center text-zinc-600 text-xs uppercase tracking-widest">All Sport 5000</div>
+        <div className="text-center text-zinc-600 text-xs uppercase tracking-widest" style={{ fontFamily: LABEL_FONT }}>All Sport 5000</div>
         <div className="flex justify-around">
           <div className="text-center"><Label className="text-base">TOL</Label><SevenSegNumber value={state.guestTOL} digits={1} height={50} color={GREEN} /></div>
           <div className="text-center"><Label className="text-base">Fouls</Label><SevenSegNumber value={state.guestFouls} digits={2} height={50} color={AMBER} /></div>
@@ -204,8 +225,10 @@ export default function DAS5000Display() {
 function PlayerFoulCol({ title, players }: { title: string; players: any[] }) {
   return (
     <div>
-      <div className="text-yellow-300 font-black text-center text-xl uppercase mb-2"
-        style={{ fontFamily: "Impact, 'Arial Black', sans-serif" }}>
+      <div
+        className="text-yellow-300 text-center text-xl uppercase mb-2 tracking-wider"
+        style={{ fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif", fontWeight: 900 }}
+      >
         {title} • Player Fouls
       </div>
       <div className="grid grid-cols-5 gap-2">
