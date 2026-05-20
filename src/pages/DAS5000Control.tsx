@@ -288,10 +288,10 @@ export default function DAS5000Control() {
               MAIN BUTTON AREA
               Layout: [HOME 2col] [SHARED 2col] [GUEST 2col] [NUMPAD 3col] [CONTROLS]
               ══════════════════════════════════════════════════════════ */}
-          <div className="flex gap-2 px-4 pb-4 pt-3 items-start">
+          <div className="flex gap-2 px-4 pb-4 pt-3 items-start justify-center flex-wrap">
 
             {/* ── HOME (green) — 2 columns × 5 rows ── */}
-            <div className="flex-1 min-w-0">
+            <div style={{ flex: "0 0 auto", width: "clamp(88px, 13vw, 130px)" }}>
               {/* HOME header */}
               <div className="text-center text-[9px] font-black uppercase tracking-widest py-0.5 rounded mb-1"
                 style={{ color: "#fff", background: "#15803d", fontFamily: "Impact, sans-serif" }}>
@@ -325,14 +325,18 @@ export default function DAS5000Control() {
                 <SQ label="POSS ►" color="green"
                   onClick={() => update({ possession: "home" })}
                   active={state.possession === "home"} />
-                {/* Row 5 */}
-                <SQ label="PLAYER" color="green" onClick={() => {}} />
-                <SQ label="MADE SUB" color="green" onClick={() => {}} />
+                {/* Row 5 — player foul # entry */}
+                <SQ label="PLAYER FOUL #" sub="HOME" color="green"
+                  onClick={() => { setArmedSide("home"); press("FOUL+"); }}
+                  armed={armedFn === "FOUL+" && armedSide === "home"} />
+                <SQ label="BONUS" color="green"
+                  onClick={() => { setArmedSide("home"); setArmedFn("BONUS"); setTimeout(commit, 0); }}
+                  active={state.bonus === "home"} />
               </div>
             </div>
 
             {/* ── SHARED (white) — 2 columns × 5 rows ── */}
-            <div className="flex-1 min-w-0">
+            <div style={{ flex: "0 0 auto", width: "clamp(88px, 13vw, 130px)" }}>
               <div className="text-center text-[9px] font-black uppercase tracking-widest py-0.5 rounded mb-1 text-zinc-500"
                 style={{ fontFamily: "Impact, sans-serif", background: "rgba(0,0,0,0.1)" }}>
                 SHARED
@@ -345,25 +349,28 @@ export default function DAS5000Control() {
                 <SQ label="SET SCORE" sub="SET ONLY" color="white"
                   onClick={() => { setArmedSide(null); setArmedFn("SET SCORE"); }}
                   armed={armedFn === "SET SCORE" && !armedSide} />
-                {/* Row 2: arrow up + OUT OF GAME */}
+                {/* Row 2 */}
                 <SQ label="▲ PERIOD" color="white"
                   onClick={() => { update({ period: state.period + 1 }); }} />
                 <SQ label="OUT OF GAME" color="white" onClick={() => {}} />
-                {/* Row 3: IN GAME + DELETE PLAYER FOUL */}
-                <SQ label="IN GAME" color="white" onClick={() => {}} />
-                <SQ label="DELETE PLAYER FOUL" color="white" onClick={() => {}} />
-                {/* Row 4: BLANK TEAM SUB + CLEAR TEAM SUB */}
-                <SQ label="BLANK TEAM SUB" color="white" onClick={() => {}} />
-                <SQ label="CLEAR TEAM SUB" color="white" onClick={() => {}} />
-                {/* Row 5: FRIENDS SUB + empty/period down */}
-                <SQ label="FRIENDS SUB" color="white" onClick={() => {}} />
-                <SQ label="▼ PERIOD" color="white"
-                  onClick={() => update({ period: Math.max(1, state.period - 1) })} />
+                {/* Row 3 */}
+                <SQ label="SHOT START" color="white"
+                  onClick={() => press("SHOT START")} />
+                <SQ label="SHOT STOP" color="white"
+                  onClick={() => press("SHOT STOP")} />
+                {/* Row 4 */}
+                <SQ label="SHOT 30" color="white" onClick={() => press("SHOT 30")} />
+                <SQ label="SHOT 14" color="white" onClick={() => press("SHOT 14")} />
+                {/* Row 5 */}
+                <SQ label="SET PERIOD" color="white"
+                  onClick={() => press("PERIOD")} armed={armedFn === "PERIOD"} />
+                <SQ label="SET SHOT" color="white"
+                  onClick={() => press("SET SHOT")} armed={armedFn === "SET SHOT"} />
               </div>
             </div>
 
             {/* ── GUEST (red) — 2 columns × 5 rows — mirror of HOME ── */}
-            <div className="flex-1 min-w-0">
+            <div style={{ flex: "0 0 auto", width: "clamp(88px, 13vw, 130px)" }}>
               <div className="text-center text-[9px] font-black uppercase tracking-widest py-0.5 rounded mb-1"
                 style={{ color: "#fff", background: "#b91c1c", fontFamily: "Impact, sans-serif" }}>
                 GUEST ►
@@ -395,9 +402,13 @@ export default function DAS5000Control() {
                 <SQ label="SCORE" sub="-" color="red"
                   onClick={() => { setArmedSide("guest"); setArmedFn("SCORE-"); setTimeout(commit, 0); }}
                   armed={armedFn === "SCORE-" && armedSide === "guest"} />
-                {/* Row 5 */}
-                <SQ label="MADE SUB" color="red" onClick={() => {}} />
-                <SQ label="PLAYER" color="red" onClick={() => {}} />
+                {/* Row 5 — player foul # entry */}
+                <SQ label="BONUS" color="red"
+                  onClick={() => { setArmedSide("guest"); setArmedFn("BONUS"); setTimeout(commit, 0); }}
+                  active={state.bonus === "guest"} />
+                <SQ label="PLAYER FOUL #" sub="GUEST" color="red"
+                  onClick={() => { setArmedSide("guest"); press("FOUL+"); }}
+                  armed={armedFn === "FOUL+" && armedSide === "guest"} />
               </div>
             </div>
 
