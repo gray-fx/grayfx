@@ -1,35 +1,40 @@
 import { cn } from "@/lib/utils";
 
-// Seven Segment font from cdnfonts
-// @import url('https://fonts.cdnfonts.com/css/seven-segment');
-// Add that import to your global CSS or layout if not already present.
+// Inline @font-face so the space in the woff filename is properly encoded
+const FONT_STYLE = `
+@font-face {
+  font-family: 'SevenSeg';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Seven Segment'),
+       url('https://fonts.cdnfonts.com/s/71640/Seven%20Segment.woff') format('woff');
+}
+`;
 
-// ---------------------------------------------------------------------------
-// Dim / ghost layer — renders "88" or "8" etc. behind the real digits so the
-// unlit segments are visible just like a real scoreboard.
-// ---------------------------------------------------------------------------
-
-function ghostChar(c: string): string {
-  if (c === ":" || c === ".") return c;
-  if (c === " ") return " ";
-  return "8";
+// Inject once into <head>
+if (typeof document !== "undefined") {
+  const id = "seven-seg-font";
+  if (!document.getElementById(id)) {
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = FONT_STYLE;
+    document.head.appendChild(style);
+  }
 }
 
-const FONT_FAMILY = "'Seven Segment', monospace";
-
-interface DigitStyleProps {
-  height: number;
-  color: string;
-}
+const FONT_FAMILY = "'SevenSeg', monospace";
 
 function fontSizeFromHeight(height: number): number {
-  // The Seven Segment font cap-height is ~75% of font-size.
-  // Empirically, font-size ≈ height * 0.95 gives a good fit.
   return Math.round(height * 0.95);
 }
 
+function ghostChar(c: string): string {
+  if (c === ":" || c === "." || c === " ") return c;
+  return "8";
+}
+
 // ---------------------------------------------------------------------------
-// SevenSegDigit — single character, kept for backwards compat
+// SevenSegDigit — single character
 // ---------------------------------------------------------------------------
 export function SevenSegDigit({
   d,
@@ -45,7 +50,6 @@ export function SevenSegDigit({
 
   return (
     <span style={{ position: "relative", display: "inline-block", lineHeight: 1 }}>
-      {/* ghost / unlit layer */}
       <span
         aria-hidden
         style={{
@@ -55,11 +59,12 @@ export function SevenSegDigit({
           lineHeight: 1,
           userSelect: "none",
           letterSpacing: 0,
+          display: "block",
+          whiteSpace: "pre",
         }}
       >
         {ghostChar(d)}
       </span>
-      {/* lit layer */}
       <span
         style={{
           fontFamily: FONT_FAMILY,
@@ -70,10 +75,69 @@ export function SevenSegDigit({
           left: 0,
           top: 0,
           letterSpacing: 0,
+          whiteSpace: "pre",
           textShadow: `0 0 12px ${color}cc, 0 0 30px ${color}66`,
         }}
       >
         {d}
+      </span>
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SegText — renders a full string with ghost unlit layer
+// ---------------------------------------------------------------------------
+export function SegText({
+  text,
+  height = 100,
+  color = "#ff2d2d",
+  className,
+}: {
+  text: string;
+  height?: number;
+  color?: string;
+  className?: string;
+}) {
+  const fontSize = fontSizeFromHeight(height);
+  const offColor = "rgba(255,255,255,0.07)";
+  const ghost = text.split("").map(ghostChar).join("");
+
+  return (
+    <span
+      className={cn("inline-block", className)}
+      style={{ position: "relative", lineHeight: 1, display: "inline-block" }}
+    >
+      <span
+        aria-hidden
+        style={{
+          fontFamily: FONT_FAMILY,
+          fontSize,
+          color: offColor,
+          lineHeight: 1,
+          letterSpacing: "0.04em",
+          userSelect: "none",
+          whiteSpace: "pre",
+          display: "block",
+        }}
+      >
+        {ghost}
+      </span>
+      <span
+        style={{
+          fontFamily: FONT_FAMILY,
+          fontSize,
+          color,
+          lineHeight: 1,
+          letterSpacing: "0.04em",
+          position: "absolute",
+          left: 0,
+          top: 0,
+          whiteSpace: "pre",
+          textShadow: `0 0 12px ${color}cc, 0 0 30px ${color}66`,
+        }}
+      >
+        {text}
       </span>
     </span>
   );
@@ -99,74 +163,11 @@ export function SevenSegNumber({
 }) {
   let str = typeof value === "number" ? String(value) : value;
 
-  // Delegate clock strings (contains : or .) to SegText
   if (typeof value === "string" && (value.includes(":") || value.includes("."))) {
     return <SegText text={value} height={height} color={color} className={className} />;
   }
 
   str = leadingZero ? str.padStart(digits, "0") : str.padStart(digits, " ");
 
-  return (
-    <SegText text={str} height={height} color={color} className={className} />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// SegText — renders a full string (digits, colons, dots, spaces)
-// ---------------------------------------------------------------------------
-export function SegText({
-  text,
-  height = 100,
-  color = "#ff2d2d",
-  className,
-}: {
-  text: string;
-  height?: number;
-  color?: string;
-  className?: string;
-}) {
-  const fontSize = fontSizeFromHeight(height);
-  const offColor = "rgba(255,255,255,0.07)";
-  const ghost = text.split("").map(ghostChar).join("");
-
-  return (
-    <span
-      className={cn("inline-block", className)}
-      style={{ position: "relative", lineHeight: 1, display: "inline-block" }}
-    >
-      {/* ghost / unlit layer */}
-      <span
-        aria-hidden
-        style={{
-          fontFamily: FONT_FAMILY,
-          fontSize,
-          color: offColor,
-          lineHeight: 1,
-          letterSpacing: "0.04em",
-          userSelect: "none",
-          whiteSpace: "pre",
-          display: "block",
-        }}
-      >
-        {ghost}
-      </span>
-      {/* lit layer */}
-      <span
-        style={{
-          fontFamily: FONT_FAMILY,
-          fontSize,
-          color,
-          lineHeight: 1,
-          letterSpacing: "0.04em",
-          position: "absolute",
-          left: 0,
-          top: 0,
-          whiteSpace: "pre",
-          textShadow: `0 0 12px ${color}cc, 0 0 30px ${color}66`,
-        }}
-      >
-        {text}
-      </span>
-    </span>
-  );
+  return <SegText text={str} height={height} color={color} className={className} />;
 }
