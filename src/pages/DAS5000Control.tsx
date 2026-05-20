@@ -58,6 +58,14 @@ export default function DAS5000Control() {
     setTimeout(() => setStatus("READY"), 600);
   }, [armedFn, armedSide, pendingDigits, state, update]);
 
+
+  // Instant action — fires immediately, no arm/enter needed
+  const act = useCallback((fn: () => void) => {
+    fn();
+    setArmedFn(null); setArmedSide(null); setPendingDigits("");
+    setStatus("OK");
+    setTimeout(() => setStatus("READY"), 400);
+  }, []);
   const press = useCallback((key: string) => {
     if (/^\d$/.test(key)) { setPendingDigits(d => (d + key).slice(0, 4)); return; }
     if (key === "CLR") { setPendingDigits(""); setArmedFn(null); setArmedSide(null); setStatus("CLR"); setTimeout(() => setStatus("READY"), 400); return; }
@@ -301,36 +309,36 @@ export default function DAS5000Control() {
               <div className="grid grid-cols-2 gap-1">
                 {/* Row 1 */}
                 <SQ label="SCORE" sub="+1" color="green"
-                  onClick={() => { setArmedSide("home"); setArmedFn("SCORE+1"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 1 })))}
                   armed={armedFn === "SCORE+1" && armedSide === "home"} />
                 <SQ label="TIME" sub="SHOT TIME" color="green"
                   onClick={() => { setArmedSide("home"); press("SET SHOT"); }}
                   armed={armedFn === "SET SHOT" && armedSide === "home"} />
                 {/* Row 2 */}
                 <SQ label="SCORE" sub="+2" color="green"
-                  onClick={() => { setArmedSide("home"); setArmedFn("SCORE+2"); setTimeout(commit, 0); }} />
+                  onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 2 })))} />
                 <SQ label="TEAM FOULS" sub="FOUL +" color="green"
-                  onClick={() => { setArmedSide("home"); setArmedFn("FOUL+"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ homeFouls: p.homeFouls + 1 })))}
                   armed={armedFn === "FOUL+" && armedSide === "home"} />
                 {/* Row 3 */}
                 <SQ label="SCORE" sub="+3" color="green"
-                  onClick={() => { setArmedSide("home"); setArmedFn("SCORE+3"); setTimeout(commit, 0); }} />
+                  onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 3 })))} />
                 <SQ label="TEAM FOULS" sub="FOUL -" color="green"
-                  onClick={() => { setArmedSide("home"); setArmedFn("FOUL-"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ homeFouls: Math.max(0, p.homeFouls - 1) })))}
                   armed={armedFn === "FOUL-" && armedSide === "home"} />
                 {/* Row 4 */}
                 <SQ label="SCORE" sub="-" color="green"
-                  onClick={() => { setArmedSide("home"); setArmedFn("SCORE-"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ homeScore: Math.max(0, p.homeScore - 1) })))}
                   armed={armedFn === "SCORE-" && armedSide === "home"} />
                 <SQ label="POSS ►" color="green"
                   onClick={() => update({ possession: "home" })}
                   active={state.possession === "home"} />
                 {/* Row 5 — player foul # entry */}
                 <SQ label="PLAYER FOUL #" sub="HOME" color="green"
-                  onClick={() => { setArmedSide("home"); press("FOUL+"); }}
+                  onClick={() => act(() => update(p => ({ homeFouls: p.homeFouls + 1 })))}
                   armed={armedFn === "FOUL+" && armedSide === "home"} />
                 <SQ label="BONUS" color="green"
-                  onClick={() => { setArmedSide("home"); setArmedFn("BONUS"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ bonus: p.bonus === "home" ? "none" : "home" })))}
                   active={state.bonus === "home"} />
               </div>
             </div>
@@ -381,33 +389,33 @@ export default function DAS5000Control() {
                   onClick={() => { setArmedSide("guest"); press("SET SHOT"); }}
                   armed={armedFn === "SET SHOT" && armedSide === "guest"} />
                 <SQ label="SCORE" sub="+1" color="red"
-                  onClick={() => { setArmedSide("guest"); setArmedFn("SCORE+1"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 1 })))}
                   armed={armedFn === "SCORE+1" && armedSide === "guest"} />
                 {/* Row 2 */}
                 <SQ label="TEAM FOULS" sub="FOUL +" color="red"
-                  onClick={() => { setArmedSide("guest"); setArmedFn("FOUL+"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ guestFouls: p.guestFouls + 1 })))}
                   armed={armedFn === "FOUL+" && armedSide === "guest"} />
                 <SQ label="SCORE" sub="+2" color="red"
-                  onClick={() => { setArmedSide("guest"); setArmedFn("SCORE+2"); setTimeout(commit, 0); }} />
+                  onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 2 })))} />
                 {/* Row 3 */}
                 <SQ label="TEAM FOULS" sub="FOUL -" color="red"
-                  onClick={() => { setArmedSide("guest"); setArmedFn("FOUL-"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ guestFouls: Math.max(0, p.guestFouls - 1) })))}
                   armed={armedFn === "FOUL-" && armedSide === "guest"} />
                 <SQ label="SCORE" sub="+3" color="red"
-                  onClick={() => { setArmedSide("guest"); setArmedFn("SCORE+3"); setTimeout(commit, 0); }} />
+                  onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 3 })))} />
                 {/* Row 4 */}
                 <SQ label="◄ POSS" color="red"
                   onClick={() => update({ possession: "guest" })}
                   active={state.possession === "guest"} />
                 <SQ label="SCORE" sub="-" color="red"
-                  onClick={() => { setArmedSide("guest"); setArmedFn("SCORE-"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ guestScore: Math.max(0, p.guestScore - 1) })))}
                   armed={armedFn === "SCORE-" && armedSide === "guest"} />
                 {/* Row 5 — player foul # entry */}
                 <SQ label="BONUS" color="red"
-                  onClick={() => { setArmedSide("guest"); setArmedFn("BONUS"); setTimeout(commit, 0); }}
+                  onClick={() => act(() => update(p => ({ bonus: p.bonus === "guest" ? "none" : "guest" })))}
                   active={state.bonus === "guest"} />
                 <SQ label="PLAYER FOUL #" sub="GUEST" color="red"
-                  onClick={() => { setArmedSide("guest"); press("FOUL+"); }}
+                  onClick={() => act(() => update(p => ({ guestFouls: p.guestFouls + 1 })))}
                   armed={armedFn === "FOUL+" && armedSide === "guest"} />
               </div>
             </div>
