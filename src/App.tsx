@@ -37,6 +37,8 @@ const App = () => (
           <Route path="/upload" element={<Upload />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/athlete-finder" element={<AthleteFinder />} />
+          <Route path="/das5000-control" element={<DAS5000Control />} />
+          <Route path="/das5000" element={<DAS5000Display />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
