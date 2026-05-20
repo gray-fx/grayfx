@@ -28,16 +28,17 @@ export default function DAS5000Display() {
   }, [state.hornAt]);
 
   const RED = "#ff2a2a";
-  const AMBER = "#ffffff";
+  const AMBER = "#ffb800";
   const GREEN = "#1cff5a";
 
   const Label = ({ children, className = "" }: any) => (
     <div
-      className={`text-yellow-300 tracking-wider text-center uppercase ${className}`}
+      className={`tracking-wider text-center uppercase ${className}`}
       style={{
         fontFamily: LABEL_FONT,
         fontWeight: 900,
-        textShadow: "0 0 8px rgba(255,184,0,0.4)",
+        color: "#ffffff",
+        textShadow: "0 0 6px rgba(255,255,255,0.2)",
         letterSpacing: "0.06em",
       }}
     >
@@ -46,20 +47,20 @@ export default function DAS5000Display() {
   );
 
   const Panel = ({ children, className = "" }: any) => (
-    <div className={`bg-black border-4 border-zinc-800 rounded-lg p-4 ${className}`}
+    <div className={`bg-black border-4 border-zinc-800 rounded-lg p-6 ${className}`}
       style={{ boxShadow: "inset 0 0 40px rgba(0,0,0,0.9), 0 8px 30px rgba(0,0,0,0.7)" }}>
       {children}
     </div>
   );
 
   const TeamBlock = ({ name, score, color, dotsBonus, dotsDouble }: any) => (
-    <div className="flex flex-col items-center gap-2 flex-1">
-      <Label className="text-3xl md:text-5xl truncate w-full px-2">{name}</Label>
-      <SevenSegNumber value={score} digits={3} height={160} color={color} />
+    <div className="flex flex-col items-center gap-3 flex-1">
+      <Label className="text-4xl md:text-6xl truncate w-full px-2">{name}</Label>
+      <SevenSegNumber value={score} digits={3} height={220} color={color} />
       {(dotsBonus || dotsDouble) && (
         <div className="flex gap-2 mt-1">
-          <div className="w-4 h-4 rounded-full" style={{ background: dotsBonus ? AMBER : "#222", boxShadow: dotsBonus ? `0 0 10px ${AMBER}` : "none" }} />
-          <div className="w-4 h-4 rounded-full" style={{ background: dotsDouble ? RED : "#222", boxShadow: dotsDouble ? `0 0 10px ${RED}` : "none" }} />
+          <div className="w-5 h-5 rounded-full" style={{ background: dotsBonus ? AMBER : "#222", boxShadow: dotsBonus ? `0 0 10px ${AMBER}` : "none" }} />
+          <div className="w-5 h-5 rounded-full" style={{ background: dotsDouble ? RED : "#222", boxShadow: dotsDouble ? `0 0 10px ${RED}` : "none" }} />
         </div>
       )}
     </div>
@@ -68,48 +69,48 @@ export default function DAS5000Display() {
   // === LAYOUTS ===
   const renderBasketball = (withFouls: boolean) => (
     <Panel className="w-full max-w-[1600px]">
-      <div className="grid grid-cols-3 gap-6 items-stretch">
+      <div className="grid grid-cols-3 gap-8 items-stretch">
         <TeamBlock name={state.homeName} score={state.homeScore} color={RED}
           dotsBonus={state.bonus === "home"} dotsDouble={state.doubleBonus === "home"} />
-        <div className="flex flex-col items-center justify-between gap-4 border-x-2 border-zinc-800 px-4">
-          <div>
-            <Label className="text-xl">Period</Label>
-            <SevenSegNumber value={state.period} digits={1} height={80} color={AMBER} />
+        <div className="flex flex-col items-center justify-between gap-4 border-x-2 border-zinc-800 px-6">
+          <div className="text-center">
+            <Label className="text-2xl">Period</Label>
+            <SevenSegNumber value={state.period} digits={1} height={110} color={AMBER} />
           </div>
-          <div>
-            <Label className="text-xl">{state.countUp ? "Time" : "Clock"}</Label>
-            <SegText text={clockStr} height={120} color={RED} />
+          <div className="text-center">
+            <Label className="text-2xl">{state.countUp ? "Time" : "Clock"}</Label>
+            <SegText text={clockStr} height={160} color={RED} />
           </div>
           {state.showShotClock && (
-            <div>
-              <Label className="text-xl">Shot</Label>
-              <SevenSegNumber value={Math.ceil(state.shotClockMs / 1000)} digits={2} height={60} color={AMBER} />
+            <div className="text-center">
+              <Label className="text-2xl">Shot</Label>
+              <SevenSegNumber value={Math.ceil(state.shotClockMs / 1000)} digits={2} height={90} color={AMBER} />
             </div>
           )}
           <div className="flex items-center gap-6">
-            <div className={`w-6 h-6 rounded-full ${state.possession === "home" ? "bg-amber-400" : "bg-zinc-800"}`}
+            <div className={`w-7 h-7 rounded-full ${state.possession === "home" ? "bg-amber-400" : "bg-zinc-800"}`}
               style={state.possession === "home" ? { boxShadow: `0 0 12px ${AMBER}` } : {}} />
-            <Label className="text-sm">POSS</Label>
-            <div className={`w-6 h-6 rounded-full ${state.possession === "guest" ? "bg-amber-400" : "bg-zinc-800"}`}
+            <Label className="text-base">POSS</Label>
+            <div className={`w-7 h-7 rounded-full ${state.possession === "guest" ? "bg-amber-400" : "bg-zinc-800"}`}
               style={state.possession === "guest" ? { boxShadow: `0 0 12px ${AMBER}` } : {}} />
           </div>
         </div>
         <TeamBlock name={state.guestName} score={state.guestScore} color={RED}
           dotsBonus={state.bonus === "guest"} dotsDouble={state.doubleBonus === "guest"} />
       </div>
-      <div className="grid grid-cols-3 gap-6 mt-6 pt-4 border-t-2 border-zinc-800">
+      <div className="grid grid-cols-3 gap-8 mt-8 pt-6 border-t-2 border-zinc-800">
         <div className="flex justify-around">
-          <div className="text-center"><Label className="text-base">Fouls</Label><SevenSegNumber value={state.homeFouls} digits={2} height={50} color={AMBER} /></div>
-          <div className="text-center"><Label className="text-base">TOL</Label><SevenSegNumber value={state.homeTOL} digits={1} height={50} color={GREEN} /></div>
+          <div className="text-center"><Label className="text-xl">Fouls</Label><SevenSegNumber value={state.homeFouls} digits={2} height={70} color={AMBER} /></div>
+          <div className="text-center"><Label className="text-xl">TOL</Label><SevenSegNumber value={state.homeTOL} digits={1} height={70} color={GREEN} /></div>
         </div>
-        <div className="text-center text-zinc-600 text-xs uppercase tracking-widest" style={{ fontFamily: LABEL_FONT }}>All Sport 5000</div>
+        <div className="text-center text-zinc-600 text-sm uppercase tracking-widest self-center" style={{ fontFamily: LABEL_FONT }}>All Sport 5000</div>
         <div className="flex justify-around">
-          <div className="text-center"><Label className="text-base">TOL</Label><SevenSegNumber value={state.guestTOL} digits={1} height={50} color={GREEN} /></div>
-          <div className="text-center"><Label className="text-base">Fouls</Label><SevenSegNumber value={state.guestFouls} digits={2} height={50} color={AMBER} /></div>
+          <div className="text-center"><Label className="text-xl">TOL</Label><SevenSegNumber value={state.guestTOL} digits={1} height={70} color={GREEN} /></div>
+          <div className="text-center"><Label className="text-xl">Fouls</Label><SevenSegNumber value={state.guestFouls} digits={2} height={70} color={AMBER} /></div>
         </div>
       </div>
       {withFouls && (
-        <div className="grid grid-cols-2 gap-6 mt-6 pt-4 border-t-2 border-zinc-800">
+        <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t-2 border-zinc-800">
           <PlayerFoulCol title={state.homeName} players={state.homePlayers} />
           <PlayerFoulCol title={state.guestName} players={state.guestPlayers} />
         </div>
@@ -119,15 +120,15 @@ export default function DAS5000Display() {
 
   const renderFootball = () => (
     <Panel className="w-full max-w-[1600px]">
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-8">
         <TeamBlock name={state.homeName} score={state.homeScore} color={RED} />
-        <div className="flex flex-col items-center gap-4 border-x-2 border-zinc-800 px-4">
-          <div><Label>Qtr</Label><SevenSegNumber value={state.period} digits={1} height={70} color={AMBER} /></div>
-          <div><Label>Clock</Label><SegText text={clockStr} height={120} color={RED} /></div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center"><Label>Down</Label><SevenSegNumber value={state.down} digits={1} height={50} color={AMBER} /></div>
-            <div className="text-center"><Label>To Go</Label><SevenSegNumber value={state.distance} digits={2} height={50} color={AMBER} /></div>
-            <div className="text-center"><Label>Ball On</Label><SevenSegNumber value={state.ballOn} digits={2} height={50} color={AMBER} /></div>
+        <div className="flex flex-col items-center gap-6 border-x-2 border-zinc-800 px-6">
+          <div className="text-center"><Label className="text-2xl">Qtr</Label><SevenSegNumber value={state.period} digits={1} height={110} color={AMBER} /></div>
+          <div className="text-center"><Label className="text-2xl">Clock</Label><SegText text={clockStr} height={160} color={RED} /></div>
+          <div className="grid grid-cols-3 gap-4 w-full">
+            <div className="text-center"><Label className="text-xl">Down</Label><SevenSegNumber value={state.down} digits={1} height={70} color={AMBER} /></div>
+            <div className="text-center"><Label className="text-xl">To Go</Label><SevenSegNumber value={state.distance} digits={2} height={70} color={AMBER} /></div>
+            <div className="text-center"><Label className="text-xl">Ball On</Label><SevenSegNumber value={state.ballOn} digits={2} height={70} color={AMBER} /></div>
           </div>
         </div>
         <TeamBlock name={state.guestName} score={state.guestScore} color={RED} />
@@ -137,22 +138,22 @@ export default function DAS5000Display() {
 
   const renderHockey = () => (
     <Panel className="w-full max-w-[1600px]">
-      <div className="grid grid-cols-3 gap-6">
-        <div className="flex flex-col items-center gap-3">
-          <Label className="text-4xl">{state.homeName}</Label>
-          <SevenSegNumber value={state.homeScore} digits={2} height={150} color={RED} />
-          <div className="text-center"><Label>SOG</Label><SevenSegNumber value={state.homeSOG} digits={2} height={50} color={AMBER} /></div>
-          <div className="text-center"><Label>Penalty</Label><SegText text={formatClock(state.homePenaltyMs)} height={50} color={AMBER} /></div>
+      <div className="grid grid-cols-3 gap-8">
+        <div className="flex flex-col items-center gap-4">
+          <Label className="text-5xl">{state.homeName}</Label>
+          <SevenSegNumber value={state.homeScore} digits={2} height={210} color={RED} />
+          <div className="text-center"><Label className="text-xl">SOG</Label><SevenSegNumber value={state.homeSOG} digits={2} height={70} color={AMBER} /></div>
+          <div className="text-center"><Label className="text-xl">Penalty</Label><SegText text={formatClock(state.homePenaltyMs)} height={70} color={AMBER} /></div>
         </div>
-        <div className="flex flex-col items-center gap-4 border-x-2 border-zinc-800 px-4">
-          <div><Label>Period</Label><SevenSegNumber value={state.period} digits={1} height={70} color={AMBER} /></div>
-          <div><Label>Clock</Label><SegText text={clockStr} height={130} color={RED} /></div>
+        <div className="flex flex-col items-center gap-6 border-x-2 border-zinc-800 px-6">
+          <div className="text-center"><Label className="text-2xl">Period</Label><SevenSegNumber value={state.period} digits={1} height={110} color={AMBER} /></div>
+          <div className="text-center"><Label className="text-2xl">Clock</Label><SegText text={clockStr} height={170} color={RED} /></div>
         </div>
-        <div className="flex flex-col items-center gap-3">
-          <Label className="text-4xl">{state.guestName}</Label>
-          <SevenSegNumber value={state.guestScore} digits={2} height={150} color={RED} />
-          <div className="text-center"><Label>SOG</Label><SevenSegNumber value={state.guestSOG} digits={2} height={50} color={AMBER} /></div>
-          <div className="text-center"><Label>Penalty</Label><SegText text={formatClock(state.guestPenaltyMs)} height={50} color={AMBER} /></div>
+        <div className="flex flex-col items-center gap-4">
+          <Label className="text-5xl">{state.guestName}</Label>
+          <SevenSegNumber value={state.guestScore} digits={2} height={210} color={RED} />
+          <div className="text-center"><Label className="text-xl">SOG</Label><SevenSegNumber value={state.guestSOG} digits={2} height={70} color={AMBER} /></div>
+          <div className="text-center"><Label className="text-xl">Penalty</Label><SegText text={formatClock(state.guestPenaltyMs)} height={70} color={AMBER} /></div>
         </div>
       </div>
     </Panel>
@@ -160,11 +161,11 @@ export default function DAS5000Display() {
 
   const renderSoccer = () => (
     <Panel className="w-full max-w-[1400px]">
-      <div className="grid grid-cols-3 gap-6 items-center">
+      <div className="grid grid-cols-3 gap-8 items-center">
         <TeamBlock name={state.homeName} score={state.homeScore} color={GREEN} />
-        <div className="flex flex-col items-center gap-4 border-x-2 border-zinc-800 px-4">
-          <div><Label>Half</Label><SevenSegNumber value={state.period} digits={1} height={60} color={AMBER} /></div>
-          <div><Label>Time</Label><SegText text={clockStr} height={130} color={GREEN} /></div>
+        <div className="flex flex-col items-center gap-6 border-x-2 border-zinc-800 px-6">
+          <div className="text-center"><Label className="text-2xl">Half</Label><SevenSegNumber value={state.period} digits={1} height={90} color={AMBER} /></div>
+          <div className="text-center"><Label className="text-2xl">Time</Label><SegText text={clockStr} height={170} color={GREEN} /></div>
         </div>
         <TeamBlock name={state.guestName} score={state.guestScore} color={GREEN} />
       </div>
@@ -173,17 +174,17 @@ export default function DAS5000Display() {
 
   const renderBaseball = () => (
     <Panel className="w-full max-w-[1400px]">
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-8">
         <TeamBlock name={state.homeName} score={state.homeScore} color={RED} />
-        <div className="flex flex-col items-center gap-3 border-x-2 border-zinc-800 px-4">
-          <div className="flex items-center gap-3">
-            <Label>Inn</Label>
-            <SegText text={`${state.inningHalf}${state.inning}`} height={70} color={AMBER} />
+        <div className="flex flex-col items-center gap-4 border-x-2 border-zinc-800 px-6">
+          <div className="flex items-center gap-4">
+            <Label className="text-2xl">Inn</Label>
+            <SegText text={`${state.inningHalf}${state.inning}`} height={100} color={AMBER} />
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center"><Label>B</Label><SevenSegNumber value={state.balls} digits={1} height={50} color={GREEN} /></div>
-            <div className="text-center"><Label>S</Label><SevenSegNumber value={state.strikes} digits={1} height={50} color={AMBER} /></div>
-            <div className="text-center"><Label>O</Label><SevenSegNumber value={state.outs} digits={1} height={50} color={RED} /></div>
+          <div className="grid grid-cols-3 gap-3 w-full">
+            <div className="text-center"><Label className="text-xl">B</Label><SevenSegNumber value={state.balls} digits={1} height={70} color={GREEN} /></div>
+            <div className="text-center"><Label className="text-xl">S</Label><SevenSegNumber value={state.strikes} digits={1} height={70} color={AMBER} /></div>
+            <div className="text-center"><Label className="text-xl">O</Label><SevenSegNumber value={state.outs} digits={1} height={70} color={RED} /></div>
           </div>
         </div>
         <TeamBlock name={state.guestName} score={state.guestScore} color={RED} />
@@ -193,9 +194,9 @@ export default function DAS5000Display() {
 
   const renderMinimal = () => (
     <Panel className="w-full max-w-[1200px]">
-      <div className="grid grid-cols-3 gap-6 items-center">
+      <div className="grid grid-cols-3 gap-8 items-center">
         <TeamBlock name={state.homeName} score={state.homeScore} color={RED} />
-        <SegText text={clockStr} height={140} color={AMBER} />
+        <SegText text={clockStr} height={180} color={AMBER} />
         <TeamBlock name={state.guestName} score={state.guestScore} color={RED} />
       </div>
     </Panel>
@@ -226,8 +227,8 @@ function PlayerFoulCol({ title, players }: { title: string; players: any[] }) {
   return (
     <div>
       <div
-        className="text-yellow-300 text-center text-xl uppercase mb-2 tracking-wider"
-        style={{ fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif", fontWeight: 900 }}
+        className="text-center text-xl uppercase mb-2 tracking-wider"
+        style={{ fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif", fontWeight: 900, color: "#ffffff" }}
       >
         {title} • Player Fouls
       </div>
