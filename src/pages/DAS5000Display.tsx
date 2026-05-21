@@ -1,634 +1,399 @@
-import { useDAS5000, formatClock } from "@/hooks/use-das5000";
-import { SevenSegNumber, SegText } from "@/components/das5000/SevenSeg";
-import { useEffect, useState } from "react";
+import { useScoreboard, SPORT_CONFIG, formatClock } from "@/hooks/use-scoreboard";
+import { motion, AnimatePresence } from "framer-motion";
+import { Flag, AlertTriangle, Hand } from "lucide-react";
 
-if (typeof document !== "undefined") {
-  const id = "barlow-condensed-font";
-  if (!document.getElementById(id)) {
-    const link = document.createElement("link");
-    link.id = id;
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&display=swap";
-    document.head.appendChild(link);
-  }
-}
+const ScoreboardDisplay = () => {
+  const { state } = useScoreboard(false);
+  const config = SPORT_CONFIG[state.sport];
+  const d = state.display;
+  const clockText = formatClock(state.clockMs, d);
 
-const LABEL_FONT = "'Barlow Condensed', 'Arial Narrow', sans-serif";
+  const ordinal = (n: number) => {
+    if (n === 1) return "1st";
+    if (n === 2) return "2nd";
+    if (n === 3) return "3rd";
+    return `${n}th`;
+  };
 
-// ── Design tokens — Daktronics navy board ──────────────────────────────────
-const BOARD_BG      = "#1a3a6b";
-const BOARD_BORDER  = "#2a5098";
-const BOARD_ACCENT  = "#4070c0";
-const MODULE_BG     = "#000000";
-const MODULE_BORDER = "#2a5098";
-
-const RED         = "#ff2a2a";
-const AMBER       = "#ffb800";
-const GREEN       = "#1cff5a";
-const GHOST_AMBER = "#2a2000";
-const GHOST_RED   = "#2a0000";
-
-export default function DAS5000Display() {
-  const { state } = useDAS5000(false);
-  const clockStr = formatClock(state.clockMs, state.showTenthsUnder60);
-  const [hornFlash, setHornFlash] = useState(false);
-
-  useEffect(() => {
-    if (!state.hornAt) return;
-    setHornFlash(true);
-    const t = setTimeout(() => setHornFlash(false), 1500);
-    return () => clearTimeout(t);
-  }, [state.hornAt]);
-
-  // ── Primitives ──────────────────────────────────────────────────────────────
-
-  const Label = ({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-    <div
-      style={{
-        fontFamily: LABEL_FONT,
-        fontWeight: 900,
-        color: "#ffffff",
-        textAlign: "center",
-        textTransform: "uppercase",
-        letterSpacing: "0.06em",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
+  const PossessionDot = ({ side }: { side: "home" | "away" }) => (
+    <motion.div
+      initial={{ scale: 0 }}
+      animate={{ scale: d.showPossession && state.possession === side ? 1 : 0 }}
+      className="w-3 h-3 rounded-full bg-primary"
+    />
   );
 
-  const Board = ({ children }: { children: React.ReactNode }) => (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 1400,
-        background: BOARD_BG,
-        border: `4px solid ${BOARD_BORDER}`,
-        borderRadius: 10,
-        overflow: "hidden",
-        boxShadow: `0 0 0 2px ${BOARD_ACCENT}, 0 20px 60px rgba(0,0,0,0.9)`,
-      }}
-    >
-      {children}
-    </div>
-  );
+  // Ghost digit string for LED effect — fills display width with "8"s
+  const ghostScore = "888";
+  const ghostFoul = "88";
+  const ghostClock = state.sport === "baseball" ? "" : "88:88";
+  const ghostPeriod = "8";
+  const ghostPlayerFoul = "88 8";
 
-  const Module = ({
-    children,
-    style = {},
-  }: {
-    children: React.ReactNode;
-    style?: React.CSSProperties;
-  }) => (
-    <div
-      style={{
-        background: MODULE_BG,
-        border: `3px solid ${MODULE_BORDER}`,
-        borderRadius: 6,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        boxShadow: "inset 0 0 30px rgba(0,0,0,0.95)",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-5xl space-y-3">
 
-  // Ghost + live digit stack — live sits pixel-perfectly over ghost
-  const LedStack = ({
-    ghost,
-    live,
-    ghostDigits,
-    liveDigits,
-    height,
-    ghostColor,
-    liveColor,
-  }: {
-    ghost: number;
-    live: number;
-    ghostDigits: number;
-    liveDigits: number;
-    height: number;
-    ghostColor: string;
-    liveColor: string;
-  }) => (
-    <div style={{ position: "relative", display: "inline-flex" }}>
-      <SevenSegNumber value={ghost} digits={ghostDigits} height={height} color={ghostColor} />
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <SevenSegNumber value={live} digits={liveDigits} height={height} color={liveColor} />
-      </div>
-    </div>
-  );
+        {/* Overlays */}
+        <AnimatePresence>
+          {state.timeoutTeam && (
+            <motion.div
+              key="timeout"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-primary text-primary-foreground rounded-lg px-6 py-3 flex items-center justify-center gap-3 font-display font-bold text-lg uppercase tracking-wider"
+            >
+              <Hand className="h-5 w-5" />
+              Timeout — {state.timeoutTeam === "home" ? state.homeTeam : state.awayTeam}
+            </motion.div>
+          )}
+          {state.sport === "football" && state.flagOnPlay && (
+            <motion.div
+              key="flag"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-yellow-500 text-black rounded-lg px-6 py-3 flex items-center justify-center gap-3 font-display font-bold text-lg uppercase tracking-wider"
+            >
+              <Flag className="h-5 w-5" /> Flag on the Play
+            </motion.div>
+          )}
+          {state.sport === "football" && state.challengeTeam && (
+            <motion.div
+              key="challenge"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-destructive text-destructive-foreground rounded-lg px-6 py-3 flex items-center justify-center gap-3 font-display font-bold text-lg uppercase tracking-wider"
+            >
+              <AlertTriangle className="h-5 w-5" />
+              Challenge — {state.challengeTeam === "home" ? state.homeTeam : state.awayTeam}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-  // ── BASKETBALL ──────────────────────────────────────────────────────────────
-  const renderBasketball = (withFouls: boolean) => {
-    const pfActive = (state.lastFoulPlayer ?? null) !== null && state.lastFoulPlayer !== 0;
+        {/* Main Scoreboard */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-2xl">
 
-    return (
-      <Board>
-        <div
-          style={{
-            background: "#000",
-            borderBottom: `2px solid ${BOARD_BORDER}`,
-            fontFamily: LABEL_FONT,
-            fontWeight: 900,
-            fontSize: 12,
-            letterSpacing: "0.3em",
-            color: "#4a6090",
-            textAlign: "center",
-            padding: "4px 0",
-          }}
-        >
-          DAKTRONICS
-        </div>
+          {/* ── ROW 1: Sport bar + Clock ── */}
+          <div className="bg-secondary px-6 py-3 flex items-center justify-between gap-4">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground font-display w-24">{state.sport}</span>
 
-        <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-
-          {/* ROW 1 — Clock hero */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Module style={{ padding: "10px 52px" }}>
-              <SegText text={clockStr} height={180} color={AMBER} />
-            </Module>
-          </div>
-
-          {/* ROW 2 — HOME | PERIOD | GUEST  (3fr 1fr 3fr) */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "3fr 1fr 3fr",
-              gap: 10,
-              alignItems: "end",
-            }}
-          >
-            {/* HOME */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-              <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.homeName}</Label>
-              <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-                <LedStack
-                  ghost={888} ghostDigits={3} ghostColor={GHOST_RED}
-                  live={state.homeScore} liveDigits={3} liveColor={RED}
-                  height={240}
-                />
-              </Module>
-              <Label style={{ fontSize: "clamp(16px, 2.2vw, 30px)" }}>SCORE</Label>
-            </div>
-
-            {/* PERIOD */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-              <Label style={{ fontSize: "clamp(12px, 1.4vw, 20px)" }}>PERIOD</Label>
-              <Module style={{ width: "100%", padding: "12px 4px", flexDirection: "column", gap: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%" }}>
-                  <span
-                    style={{
-                      fontFamily: LABEL_FONT,
-                      fontWeight: 900,
-                      fontSize: "clamp(14px, 1.8vw, 22px)",
-                      lineHeight: 1,
-                      flexShrink: 0,
-                      color: state.possession === "home" ? AMBER : "#1c1c1c",
-                      textShadow: state.possession === "home" ? `0 0 12px ${AMBER}` : "none",
-                      transition: "color 0.15s, text-shadow 0.15s",
-                    }}
-                  >◄</span>
-                  <LedStack
-                    ghost={8} ghostDigits={1} ghostColor={GHOST_AMBER}
-                    live={state.period} liveDigits={1} liveColor={AMBER}
-                    height={150}
-                  />
-                  <span
-                    style={{
-                      fontFamily: LABEL_FONT,
-                      fontWeight: 900,
-                      fontSize: "clamp(14px, 1.8vw, 22px)",
-                      lineHeight: 1,
-                      flexShrink: 0,
-                      color: state.possession === "guest" ? AMBER : "#1c1c1c",
-                      textShadow: state.possession === "guest" ? `0 0 12px ${AMBER}` : "none",
-                      transition: "color 0.15s, text-shadow 0.15s",
-                    }}
-                  >►</span>
+            {/* Clock — centered, large */}
+            <div className="flex-1 flex justify-center">
+              {state.sport !== "baseball" && d.showClock && (
+                <div className="bg-black rounded-md px-6 py-2 relative inline-flex items-center justify-center">
+                  {/* Ghost digits */}
+                  <span className="font-mono text-7xl font-bold tracking-wider tabular-nums select-none pointer-events-none absolute text-[#1a1a00]">
+                    {ghostClock}
+                  </span>
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={clockText}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="font-mono text-7xl font-bold text-[hsl(var(--primary))] tracking-wider tabular-nums relative z-10"
+                    >
+                      {clockText}
+                    </motion.span>
+                  </AnimatePresence>
                 </div>
-                <div style={{ display: "flex", width: "100%", justifyContent: "space-between", padding: "0 6px" }}>
-                  {(["home", "guest"] as const).map((side) => (
-                    <span
-                      key={side}
-                      style={{
-                        fontFamily: LABEL_FONT,
-                        fontWeight: 900,
-                        fontSize: "clamp(12px, 1.5vw, 18px)",
-                        color: state.bonus === side || state.doubleBonus === side ? AMBER : "#1c1c1c",
-                        textShadow: state.bonus === side || state.doubleBonus === side ? `0 0 10px ${AMBER}` : "none",
-                        transition: "color 0.15s",
-                      }}
-                    >B</span>
+              )}
+              {state.sport === "baseball" && (
+                <div className="flex gap-5 items-center">
+                  {[
+                    { label: "B", count: state.balls, max: 4, color: "bg-primary" },
+                    { label: "S", count: state.strikes, max: 2, color: "bg-destructive" },
+                    { label: "O", count: state.outs, max: 2, color: "bg-foreground" },
+                  ].map(({ label, count, max, color }) => (
+                    <div key={label} className="text-center">
+                      <span className="text-xs text-muted-foreground font-display">{label}</span>
+                      <div className="flex gap-1 mt-1">
+                        {Array.from({ length: max }).map((_, i) => (
+                          <div key={i} className={`w-3 h-3 rounded-full border border-primary ${i < count ? color : ""}`} />
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
-              </Module>
-              {/* Invisible spacer — keeps SCORE labels baseline-aligned */}
-              <Label style={{ fontSize: "clamp(16px, 2.2vw, 30px)", opacity: 0, pointerEvents: "none" }}>SCORE</Label>
+              )}
             </div>
 
-            {/* GUEST */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-              <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.guestName}</Label>
-              <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-                <LedStack
-                  ghost={888} ghostDigits={3} ghostColor={GHOST_RED}
-                  live={state.guestScore} liveDigits={3} liveColor={RED}
-                  height={240}
-                />
-              </Module>
-              <Label style={{ fontSize: "clamp(16px, 2.2vw, 30px)" }}>SCORE</Label>
+            <div className="w-24 text-right">
+              {state.sport !== "baseball" && (
+                <span className="text-xs text-muted-foreground font-display">{state.clockRunning ? "LIVE" : "STOPPED"}</span>
+              )}
+              {state.sport === "baseball" && (
+                <span className="text-xs text-muted-foreground font-display">{state.outs} OUT{state.outs !== 1 ? "S" : ""}</span>
+              )}
             </div>
           </div>
 
-          {/* ROW 3 — FOULS | PLAYER FOUL + MATCH + TOL | FOULS  (3fr 1fr 3fr) */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "3fr 1fr 3fr",
-              gap: 10,
-              alignItems: "start",
-            }}
-          >
-            {/* HOME FOULS — square */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-              <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>FOULS</Label>
-              <Module style={{ width: "100%", aspectRatio: "1", padding: 0 }}>
-                <LedStack
-                  ghost={88} ghostDigits={2} ghostColor={GHOST_RED}
-                  live={state.homeFouls} liveDigits={2} liveColor={RED}
-                  height={130}
-                />
-              </Module>
+          {/* ── ROW 2: HOME | PERIOD | GUEST ── */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-0 px-8 pt-8 pb-4">
+
+            {/* HOME */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                <PossessionDot side="home" />
+                <h2 className="text-3xl md:text-4xl font-display font-extrabold tracking-tight text-foreground uppercase">
+                  {state.homeTeam}
+                </h2>
+              </div>
+              {/* LED score box */}
+              <div className="bg-black border-2 border-border rounded-md w-full flex items-center justify-center py-4 relative">
+                {/* Ghost */}
+                <span className="font-mono text-8xl font-black tracking-widest tabular-nums text-[#1a0000] select-none pointer-events-none absolute">
+                  {ghostScore}
+                </span>
+                <AnimatePresence mode="popLayout">
+                  <motion.span
+                    key={state.homeScore}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -20, opacity: 0 }}
+                    className="font-mono text-8xl font-black text-destructive tracking-widest tabular-nums relative z-10"
+                  >
+                    {state.homeScore}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+              {/* Timeouts */}
+              {d.showTimeouts && config.timeoutsPerHalf > 0 && (
+                <div className="flex gap-1.5">
+                  {Array.from({ length: config.timeoutsPerHalf }).map((_, i) => (
+                    <div key={i} className={`w-3 h-3 rounded-full border border-primary ${i < state.homeTimeouts ? "bg-primary" : "bg-transparent"}`} />
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* CENTER — Player Foul + MATCH + TOL */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-              <Label style={{ fontSize: "clamp(11px, 1.3vw, 18px)" }}>PLAYER FOUL</Label>
-              <Module style={{ width: "100%", padding: "10px 6px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ position: "relative", display: "inline-flex" }}>
-                    <SevenSegNumber value={88} digits={2} height={130} color={GHOST_AMBER} />
-                    {pfActive && (
-                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <SevenSegNumber value={state.lastFoulPlayer ?? 0} digits={2} height={130} color={AMBER} />
-                      </div>
-                    )}
+            {/* CENTER — Period */}
+            <div className="flex flex-col items-center gap-2 px-6">
+              {d.showPeriod && state.sport !== "baseball" && (
+                <>
+                  <span className="text-sm font-display font-semibold text-foreground uppercase tracking-widest">
+                    {config.periodName}
+                  </span>
+                  {/* LED period box — narrower */}
+                  <div className="bg-black border-2 border-border rounded-md w-28 flex items-center justify-center py-4 relative">
+                    <span className="font-mono text-7xl font-black tracking-widest tabular-nums text-[#1a1a00] select-none pointer-events-none absolute">
+                      {ghostPeriod}
+                    </span>
+                    <AnimatePresence mode="popLayout">
+                      <motion.span
+                        key={state.period}
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -20, opacity: 0 }}
+                        className="font-mono text-7xl font-black text-primary tracking-widest tabular-nums relative z-10"
+                      >
+                        {state.sport === "baseball"
+                          ? `${state.inningHalf === "top" ? "▲" : "▼"}${state.inning}`
+                          : state.period}
+                      </motion.span>
+                    </AnimatePresence>
                   </div>
-                  <div style={{ position: "relative", display: "inline-flex" }}>
-                    <SevenSegNumber value={8} digits={1} height={130} color={GHOST_AMBER} />
-                    {pfActive && (
-                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <SevenSegNumber value={state.lastFoulCount ?? 0} digits={1} height={130} color={AMBER} />
-                      </div>
-                    )}
-                  </div>
+                </>
+              )}
+              {d.showStoppage && state.sport === "soccer" && state.stoppage && (
+                <span className="text-sm text-destructive font-display font-semibold">{state.stoppage}</span>
+              )}
+              <div className="text-xs text-muted-foreground uppercase tracking-wide font-display">VS</div>
+            </div>
+
+            {/* GUEST / AWAY */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-3xl md:text-4xl font-display font-extrabold tracking-tight text-foreground uppercase">
+                  {state.awayTeam}
+                </h2>
+                <PossessionDot side="away" />
+              </div>
+              {/* LED score box */}
+              <div className="bg-black border-2 border-border rounded-md w-full flex items-center justify-center py-4 relative">
+                <span className="font-mono text-8xl font-black tracking-widest tabular-nums text-[#1a0000] select-none pointer-events-none absolute">
+                  {ghostScore}
+                </span>
+                <AnimatePresence mode="popLayout">
+                  <motion.span
+                    key={state.awayScore}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -20, opacity: 0 }}
+                    className="font-mono text-8xl font-black text-destructive tracking-widest tabular-nums relative z-10"
+                  >
+                    {state.awayScore}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+              {d.showTimeouts && config.timeoutsPerHalf > 0 && (
+                <div className="flex gap-1.5">
+                  {Array.from({ length: config.timeoutsPerHalf }).map((_, i) => (
+                    <div key={i} className={`w-3 h-3 rounded-full border border-primary ${i < state.awayTimeouts ? "bg-primary" : "bg-transparent"}`} />
+                  ))}
                 </div>
-              </Module>
-              <Label style={{ fontSize: "clamp(13px, 1.5vw, 20px)" }}>MATCH</Label>
-              <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-                {(["homeTOL", "guestTOL"] as const).map((key) => (
-                  <div key={key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                    <Label style={{ fontSize: "clamp(9px, 1vw, 14px)" }}>TOL</Label>
-                    <Module style={{ padding: "4px 8px" }}>
-                      <LedStack
-                        ghost={8} ghostDigits={1} ghostColor={GHOST_AMBER}
-                        live={state[key]} liveDigits={1} liveColor={GREEN}
-                        height={44}
-                      />
-                    </Module>
+              )}
+            </div>
+          </div>
+
+          {/* ── ROW 3: FOULS | PLAYER FOUL | FOULS (basketball) ── */}
+          {d.showFouls && state.sport === "basketball" && (
+            <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-0 px-8 pb-6">
+
+              {/* Home fouls — square box */}
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-sm font-display font-bold text-foreground uppercase tracking-widest">Fouls</span>
+                <div className="bg-black border-2 border-border rounded-md aspect-square w-20 flex items-center justify-center relative">
+                  <span className="font-mono text-5xl font-black tabular-nums text-[#1a0000] select-none pointer-events-none absolute">
+                    {ghostFoul}
+                  </span>
+                  <span className="font-mono text-5xl font-black text-destructive tabular-nums relative z-10">
+                    {state.homeFouls}
+                  </span>
+                </div>
+              </div>
+
+              {/* Player foul — center wide box */}
+              <div className="flex flex-col items-center gap-1 px-6">
+                <span className="text-sm font-display font-bold text-foreground uppercase tracking-widest">Player Foul</span>
+                {(state.homePlayerFouls.length > 0 || state.awayPlayerFouls.length > 0) ? (
+                  <div className="bg-black border-2 border-border rounded-md px-6 py-3 relative flex items-center justify-center">
+                    <span className="font-mono text-5xl font-black tabular-nums text-[#1a1a00] select-none pointer-events-none absolute tracking-[0.3em]">
+                      {ghostPlayerFoul}
+                    </span>
+                    {/* Show most recent player foul entry */}
+                    {(() => {
+                      const latest = [...state.homePlayerFouls, ...state.awayPlayerFouls].sort((a, b) => b.fouls - a.fouls)[0];
+                      return latest ? (
+                        <span className="font-mono text-5xl font-black text-primary tabular-nums relative z-10 tracking-[0.3em]">
+                          {latest.player} {latest.fouls}
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
-                ))}
+                ) : (
+                  <div className="bg-black border-2 border-border rounded-md px-6 py-3 flex items-center justify-center">
+                    <span className="font-mono text-5xl font-black text-[#1a1a00] tabular-nums tracking-[0.3em]">
+                      {ghostPlayerFoul}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Away fouls — square box */}
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-sm font-display font-bold text-foreground uppercase tracking-widest">Fouls</span>
+                <div className="bg-black border-2 border-border rounded-md aspect-square w-20 flex items-center justify-center relative">
+                  <span className="font-mono text-5xl font-black tabular-nums text-[#1a0000] select-none pointer-events-none absolute">
+                    {ghostFoul}
+                  </span>
+                  <span className="font-mono text-5xl font-black text-destructive tabular-nums relative z-10">
+                    {state.awayFouls}
+                  </span>
+                </div>
               </div>
             </div>
+          )}
 
-            {/* GUEST FOULS — square */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-              <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>FOULS</Label>
-              <Module style={{ width: "100%", aspectRatio: "1", padding: 0 }}>
-                <LedStack
-                  ghost={88} ghostDigits={2} ghostColor={GHOST_RED}
-                  live={state.guestFouls} liveDigits={2} liveColor={RED}
-                  height={130}
-                />
-              </Module>
-            </div>
+          {/* ── ROW 3 labels: SCORE | MATCH | SCORE ── */}
+          <div className="grid grid-cols-3 bg-secondary px-8 py-2">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground font-display text-center">Score</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground font-display text-center">Match</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground font-display text-center">Score</span>
           </div>
 
-          {/* Optional per-player foul grid */}
-          {withFouls && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 24,
-                paddingTop: 16,
-                borderTop: `2px solid ${BOARD_BORDER}`,
-              }}
-            >
-              <PlayerFoulCol title={state.homeName} players={state.homePlayers} />
-              <PlayerFoulCol title={state.guestName} players={state.guestPlayers} />
+          {/* ── Football-specific footer ── */}
+          {d.showDownDistance && state.sport === "football" && (
+            <div className="bg-secondary px-6 py-3 flex items-center justify-center gap-6 text-sm font-display">
+              <span className="text-foreground font-bold">{ordinal(state.down)} & {state.yardsToGo}</span>
+              <span className="text-muted-foreground">Ball on {state.ballOn}</span>
+            </div>
+          )}
+
+          {/* ── Hockey stats footer ── */}
+          {state.sport === "hockey" && (d.showSOG || d.showPIM) && (
+            <div className="bg-secondary px-6 py-3 flex items-center justify-center gap-6 text-sm font-display">
+              {d.showSOG && (
+                <span className="text-muted-foreground">
+                  SOG: <span className="text-foreground font-bold">{state.homeSOG}</span>
+                  {" - "}
+                  <span className="text-foreground font-bold">{state.awaySOG}</span>
+                </span>
+              )}
+              {d.showPIM && (
+                <span className="text-muted-foreground">
+                  PIM: <span className="text-foreground font-bold">{state.homePenaltyMinutes}</span>
+                  {" - "}
+                  <span className="text-foreground font-bold">{state.awayPenaltyMinutes}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* ── Player fouls detail panel (basketball) ── */}
+          {d.showPlayerFouls && state.sport === "basketball" && (state.homePlayerFouls.length > 0 || state.awayPlayerFouls.length > 0) && (
+            <div className="bg-card border-t border-border px-6 py-3 grid grid-cols-2 gap-6 text-xs font-display">
+              {(["home", "away"] as const).map((side) => {
+                const list = side === "home" ? state.homePlayerFouls : state.awayPlayerFouls;
+                return (
+                  <div key={side}>
+                    <div className="text-muted-foreground uppercase mb-1">
+                      {side === "home" ? state.homeTeam : state.awayTeam} Player Fouls
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {list.map((p) => (
+                        <span
+                          key={p.player}
+                          className={`px-2 py-0.5 rounded ${p.fouls >= 5 ? "bg-destructive text-destructive-foreground" : "bg-secondary text-foreground"}`}
+                        >
+                          {p.player}: <strong>{p.fouls}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
-      </Board>
-    );
-  };
 
-  // ── FOOTBALL ────────────────────────────────────────────────────────────────
-  const renderFootball = () => (
-    <Board>
-      <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <Module style={{ padding: "10px 52px" }}>
-            <SegText text={clockStr} height={150} color={AMBER} />
-          </Module>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 1.6fr 3fr", gap: 10, alignItems: "end" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.homeName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={888} ghostDigits={3} ghostColor={GHOST_RED} live={state.homeScore} liveDigits={3} liveColor={RED} height={220} />
-            </Module>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>SCORE</Label>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, width: "100%" }}>
-              {[
-                { label: "QTR",  value: state.period,   digits: 1, ghost: 8,  color: AMBER },
-                { label: "DOWN", value: state.down,     digits: 1, ghost: 8,  color: AMBER },
-                { label: "TO GO",value: state.distance, digits: 2, ghost: 88, color: AMBER },
-                { label: "ON",   value: state.ballOn,   digits: 2, ghost: 88, color: AMBER },
-              ].map(({ label, value, digits, ghost, color }) => (
-                <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                  <Label style={{ fontSize: "clamp(9px, 1vw, 14px)" }}>{label}</Label>
-                  <Module style={{ width: "100%", padding: "6px 4px", justifyContent: "center" }}>
-                    <LedStack ghost={ghost} ghostDigits={digits} ghostColor={GHOST_AMBER} live={value} liveDigits={digits} liveColor={color} height={60} />
-                  </Module>
-                </div>
-              ))}
-            </div>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)", opacity: 0, pointerEvents: "none" }}>SCORE</Label>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.guestName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={888} ghostDigits={3} ghostColor={GHOST_RED} live={state.guestScore} liveDigits={3} liveColor={RED} height={220} />
-            </Module>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>SCORE</Label>
-          </div>
-        </div>
-      </div>
-    </Board>
-  );
-
-  // ── HOCKEY ──────────────────────────────────────────────────────────────────
-  const renderHockey = () => (
-    <Board>
-      <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <Module style={{ padding: "10px 52px" }}>
-            <SegText text={clockStr} height={150} color={AMBER} />
-          </Module>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 3fr", gap: 10, alignItems: "end" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.homeName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={88} ghostDigits={2} ghostColor={GHOST_RED} live={state.homeScore} liveDigits={2} liveColor={RED} height={210} />
-            </Module>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%", marginTop: 6 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <Label style={{ fontSize: "clamp(12px, 1.4vw, 20px)" }}>SOG</Label>
-                <Module style={{ width: "100%", padding: "8px 4px", justifyContent: "center" }}>
-                  <LedStack ghost={88} ghostDigits={2} ghostColor={GHOST_AMBER} live={state.homeSOG} liveDigits={2} liveColor={AMBER} height={70} />
-                </Module>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <Label style={{ fontSize: "clamp(12px, 1.4vw, 20px)" }}>PENALTY</Label>
-                <Module style={{ width: "100%", padding: "8px 4px", justifyContent: "center" }}>
-                  <SegText text={formatClock(state.homePenaltyMs)} height={70} color={AMBER} />
-                </Module>
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(12px, 1.4vw, 20px)" }}>PERIOD</Label>
-            <Module style={{ width: "100%", padding: "12px 4px", justifyContent: "center" }}>
-              <LedStack ghost={8} ghostDigits={1} ghostColor={GHOST_AMBER} live={state.period} liveDigits={1} liveColor={AMBER} height={120} />
-            </Module>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)", opacity: 0, pointerEvents: "none" }}>SCORE</Label>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.guestName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={88} ghostDigits={2} ghostColor={GHOST_RED} live={state.guestScore} liveDigits={2} liveColor={RED} height={210} />
-            </Module>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%", marginTop: 6 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <Label style={{ fontSize: "clamp(12px, 1.4vw, 20px)" }}>SOG</Label>
-                <Module style={{ width: "100%", padding: "8px 4px", justifyContent: "center" }}>
-                  <LedStack ghost={88} ghostDigits={2} ghostColor={GHOST_AMBER} live={state.guestSOG} liveDigits={2} liveColor={AMBER} height={70} />
-                </Module>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <Label style={{ fontSize: "clamp(12px, 1.4vw, 20px)" }}>PENALTY</Label>
-                <Module style={{ width: "100%", padding: "8px 4px", justifyContent: "center" }}>
-                  <SegText text={formatClock(state.guestPenaltyMs)} height={70} color={AMBER} />
-                </Module>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Board>
-  );
-
-  // ── SOCCER ──────────────────────────────────────────────────────────────────
-  const renderSoccer = () => (
-    <Board>
-      <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <Module style={{ padding: "10px 52px" }}>
-            <SegText text={clockStr} height={150} color={GREEN} />
-          </Module>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 3fr", gap: 10, alignItems: "end" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.homeName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={88} ghostDigits={2} ghostColor={GHOST_RED} live={state.homeScore} liveDigits={2} liveColor={GREEN} height={220} />
-            </Module>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>SCORE</Label>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(12px, 1.4vw, 20px)" }}>HALF</Label>
-            <Module style={{ width: "100%", padding: "12px 4px", justifyContent: "center" }}>
-              <LedStack ghost={8} ghostDigits={1} ghostColor={GHOST_AMBER} live={state.period} liveDigits={1} liveColor={AMBER} height={150} />
-            </Module>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)", opacity: 0, pointerEvents: "none" }}>SCORE</Label>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.guestName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={88} ghostDigits={2} ghostColor={GHOST_RED} live={state.guestScore} liveDigits={2} liveColor={GREEN} height={220} />
-            </Module>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>SCORE</Label>
-          </div>
-        </div>
-      </div>
-    </Board>
-  );
-
-  // ── BASEBALL ────────────────────────────────────────────────────────────────
-  const renderBaseball = () => (
-    <Board>
-      <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 1.4fr 3fr", gap: 10, alignItems: "end" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.homeName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={888} ghostDigits={3} ghostColor={GHOST_RED} live={state.homeScore} liveDigits={3} liveColor={RED} height={220} />
-            </Module>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>SCORE</Label>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <Label style={{ fontSize: "clamp(12px, 1.4vw, 20px)" }}>INNING</Label>
-            <Module style={{ width: "100%", padding: "10px 4px", justifyContent: "center" }}>
-              <SegText text={`${state.inningHalf}${state.inning}`} height={100} color={AMBER} />
-            </Module>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, width: "100%" }}>
-              {[
-                { label: "B", value: state.balls,   color: GREEN },
-                { label: "S", value: state.strikes, color: AMBER },
-                { label: "O", value: state.outs,    color: RED   },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                  <Label style={{ fontSize: "clamp(11px, 1.2vw, 18px)" }}>{label}</Label>
-                  <Module style={{ width: "100%", padding: "6px 4px", justifyContent: "center" }}>
-                    <LedStack ghost={8} ghostDigits={1} ghostColor={GHOST_AMBER} live={value} liveDigits={1} liveColor={color} height={60} />
-                  </Module>
-                </div>
-              ))}
-            </div>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)", opacity: 0, pointerEvents: "none" }}>SCORE</Label>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.guestName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={888} ghostDigits={3} ghostColor={GHOST_RED} live={state.guestScore} liveDigits={3} liveColor={RED} height={220} />
-            </Module>
-            <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>SCORE</Label>
-          </div>
-        </div>
-      </div>
-    </Board>
-  );
-
-  // ── MINIMAL ─────────────────────────────────────────────────────────────────
-  const renderMinimal = () => (
-    <Board>
-      <div style={{ padding: "14px 18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr 3fr", gap: 10, alignItems: "center" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.homeName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={888} ghostDigits={3} ghostColor={GHOST_RED} live={state.homeScore} liveDigits={3} liveColor={RED} height={220} />
-            </Module>
-          </div>
-          <Module style={{ padding: "10px 16px", flexDirection: "column", gap: 6 }}>
-            <SegText text={clockStr} height={140} color={AMBER} />
-          </Module>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-            <Label style={{ fontSize: "clamp(22px, 3vw, 42px)" }}>{state.guestName}</Label>
-            <Module style={{ width: "100%", padding: "16px 8px", justifyContent: "center" }}>
-              <LedStack ghost={888} ghostDigits={3} ghostColor={GHOST_RED} live={state.guestScore} liveDigits={3} liveColor={RED} height={220} />
-            </Module>
-          </div>
-        </div>
-      </div>
-    </Board>
-  );
-
-  const layoutMap: Record<string, JSX.Element> = {
-    "indoor-bball":       renderBasketball(false),
-    "indoor-bball-fouls": renderBasketball(true),
-    "outdoor-football":   renderFootball(),
-    hockey:               renderHockey(),
-    soccer:               renderSoccer(),
-    baseball:             renderBaseball(),
-    minimal:              renderMinimal(),
-  };
-
-  return (
-    <div
-      className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-8"
-      style={{ background: "radial-gradient(ellipse at center, #0a0a0a 0%, #000 80%)" }}
-    >
-      {hornFlash && (
-        <div
-          className="fixed inset-0 pointer-events-none animate-pulse"
-          style={{ background: "rgba(255,200,0,0.15)" }}
-        />
-      )}
-      {layoutMap[state.layout] || renderMinimal()}
-    </div>
-  );
-}
-
-function PlayerFoulCol({ title, players }: { title: string; players: any[] }) {
-  return (
-    <div>
-      <div
-        style={{
-          fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif",
-          fontWeight: 900,
-          fontSize: 18,
-          color: "#ffffff",
-          textAlign: "center",
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-          marginBottom: 8,
-        }}
-      >
-        {title} • Player Fouls
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-        {players.length === 0 && (
-          <div style={{ gridColumn: "span 5", color: "#555", fontSize: 12, textAlign: "center" }}>
-            No players logged
-          </div>
-        )}
-        {players.map((p, i) => (
-          <div
-            key={i}
-            style={{
-              background: "#0a0a0a",
-              border: `2px solid #2a5098`,
-              borderRadius: 6,
-              padding: "8px 4px",
-              textAlign: "center",
-            }}
+        {/* ── Live Stat Feed ── */}
+        {d.showStats && state.statLog.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-card border border-border rounded-xl overflow-hidden shadow-lg"
           >
-            <div style={{ color: "#ffb800", fontFamily: "'Barlow Condensed','Arial Narrow',sans-serif", fontWeight: 900, fontSize: 16 }}>#{p.number}</div>
-            <div style={{ color: "#ff2a2a", fontFamily: "'Barlow Condensed','Arial Narrow',sans-serif", fontWeight: 900, fontSize: 20 }}>{p.fouls}F</div>
-            <div style={{ color: "#888", fontFamily: "'Barlow Condensed','Arial Narrow',sans-serif", fontWeight: 900, fontSize: 14 }}>{p.points}pt</div>
-          </div>
-        ))}
+            <div className="bg-secondary px-6 py-2">
+              <span className="text-xs uppercase tracking-widest text-muted-foreground font-display">Live Stats</span>
+            </div>
+            <div className="max-h-48 overflow-y-auto">
+              {[...state.statLog].reverse().slice(0, 10).map((entry, i) => (
+                <motion.div
+                  key={entry.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="px-6 py-2 flex items-center gap-4 border-b border-border last:border-0"
+                >
+                  <span className="font-mono text-xs text-muted-foreground w-14 shrink-0">{entry.clock}</span>
+                  <span className="text-xs font-bold text-primary w-16 shrink-0 uppercase">
+                    {entry.team === "home" ? state.homeTeam : state.awayTeam}
+                  </span>
+                  <span className="text-sm text-foreground">{entry.player}</span>
+                  <span className="text-sm font-semibold text-foreground ml-auto">{entry.action}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
       </div>
     </div>
   );
-}
+};
+
+export default ScoreboardDisplay;
