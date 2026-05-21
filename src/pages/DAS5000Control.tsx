@@ -171,7 +171,7 @@ function Divider() {
   );
 }
 
-// ─── Standard layout button (unchanged) ────────────────────────────────────────
+// ─── Standard layout button ────────────────────────────────────────
 function KeyBtn({ label, hint, onClick, color = "gray", armed = false, className = "" }: {
   label: string; hint?: string; onClick: () => void;
   color?: "gray"|"red"|"green"|"blue"|"amber"|"dark"; armed?: boolean; className?: string;
@@ -273,6 +273,66 @@ export default function DAS5000Control() {
     setArmedFn(key);
   }, [commit, update]);
 
+  // ── ALL cb callbacks declared unconditionally at the top level ──────────────
+  const cb = {
+    homeScore1:     useCallback(() => act(() => update(p => ({ homeScore: p.homeScore + 1 }))), [act, update]),
+    homeScore2:     useCallback(() => act(() => update(p => ({ homeScore: p.homeScore + 2 }))), [act, update]),
+    homeScore3:     useCallback(() => act(() => update(p => ({ homeScore: p.homeScore + 3 }))), [act, update]),
+    homeScoreMinus: useCallback(() => act(() => update(p => ({ homeScore: Math.max(0, p.homeScore - 1) }))), [act, update]),
+    homeFoulPlus:   useCallback(() => act(() => update(p => ({ homeFouls: p.homeFouls + 1 }))), [act, update]),
+    homeFoulMinus:  useCallback(() => act(() => update(p => ({ homeFouls: Math.max(0, p.homeFouls - 1) }))), [act, update]),
+    homeTOL:        useCallback(() => act(() => update(p => ({ homeTOL: Math.max(0, p.homeTOL - 1) }))), [act, update]),
+    homePoss:       useCallback(() => update({ possession: "home" }), [update]),
+    homeBonus:      useCallback(() => act(() => update(p => ({ bonus: p.bonus === "home" ? "none" : "home" }))), [act, update]),
+    homeDblBonus:   useCallback(() => act(() => update(p => ({ doubleBonus: p.doubleBonus === "home" ? "none" : "home" }))), [act, update]),
+    homeSetShot:    useCallback(() => { setArmedSide("home"); press("SET SHOT"); }, [press]),
+
+    guestScore1:     useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 1 }))), [act, update]),
+    guestScore2:     useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 2 }))), [act, update]),
+    guestScore3:     useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 3 }))), [act, update]),
+    guestScoreMinus: useCallback(() => act(() => update(p => ({ guestScore: Math.max(0, p.guestScore - 1) }))), [act, update]),
+    guestFoulPlus:   useCallback(() => act(() => update(p => ({ guestFouls: p.guestFouls + 1 }))), [act, update]),
+    guestFoulMinus:  useCallback(() => act(() => update(p => ({ guestFouls: Math.max(0, p.guestFouls - 1) }))), [act, update]),
+    guestTOL:        useCallback(() => act(() => update(p => ({ guestTOL: Math.max(0, p.guestTOL - 1) }))), [act, update]),
+    guestPoss:       useCallback(() => update({ possession: "guest" }), [update]),
+    guestBonus:      useCallback(() => act(() => update(p => ({ bonus: p.bonus === "guest" ? "none" : "guest" }))), [act, update]),
+    guestDblBonus:   useCallback(() => act(() => update(p => ({ doubleBonus: p.doubleBonus === "guest" ? "none" : "guest" }))), [act, update]),
+    guestSetShot:    useCallback(() => { setArmedSide("guest"); press("SET SHOT"); }, [press]),
+
+    periodPlus:   useCallback(() => update({ period: state.period + 1 }), [update, state.period]),
+    periodMinus:  useCallback(() => update({ period: Math.max(1, state.period - 1) }), [update, state.period]),
+    setPeriod:    useCallback(() => press("PERIOD"), [press]),
+    setClock:     useCallback(() => press("SET CLOCK"), [press]),
+    setScore:     useCallback(() => setArmedFn("SET SCORE"), []),
+    selHome:      useCallback(() => press("HOME"), [press]),
+    selGuest:     useCallback(() => press("GUEST"), [press]),
+    shotStart:    useCallback(() => press("SHOT START"), [press]),
+    shotStop:     useCallback(() => press("SHOT STOP"), [press]),
+    shot30:       useCallback(() => press("SHOT 30"), [press]),
+    shot14:       useCallback(() => press("SHOT 14"), [press]),
+    setShot:      useCallback(() => setArmedFn("SET SHOT"), []),
+    shotAdjMinus: useCallback(() => update({ shotClockMs: Math.max(0, state.shotClockMs - 1000) }), [update, state.shotClockMs]),
+    shotAdjPlus:  useCallback(() => update({ shotClockMs: state.shotClockMs + 1000 }), [update, state.shotClockMs]),
+
+    horn:   useCallback(() => press("HORN"), [press]),
+    start:  useCallback(() => press("START"), [press]),
+    stop:   useCallback(() => press("STOP"), [press]),
+    clrAll: useCallback(() => { setArmedFn(null); setArmedSide(null); setPendingDigits(""); setStatus("READY"); }, []),
+
+    n0: useCallback(() => press("0"), [press]),
+    n1: useCallback(() => press("1"), [press]),
+    n2: useCallback(() => press("2"), [press]),
+    n3: useCallback(() => press("3"), [press]),
+    n4: useCallback(() => press("4"), [press]),
+    n5: useCallback(() => press("5"), [press]),
+    n6: useCallback(() => press("6"), [press]),
+    n7: useCallback(() => press("7"), [press]),
+    n8: useCallback(() => press("8"), [press]),
+    n9: useCallback(() => press("9"), [press]),
+    clr: useCallback(() => press("CLR"), [press]),
+    ent: useCallback(() => press("ENTER"), [press]),
+  };
+
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
@@ -294,6 +354,10 @@ export default function DAS5000Control() {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [press, state.clockRunning]);
+
+  const ZONE_W = "clamp(90px, 13.5vw, 134px)";
+  const NUMPAD_W = "clamp(88px, 12.5vw, 122px)";
+  const CTRL_W = "clamp(76px, 10.5vw, 104px)";
 
   const sharedTop = (
     <div className="flex justify-between items-center w-full max-w-7xl mb-4">
@@ -323,76 +387,9 @@ export default function DAS5000Control() {
   );
 
   // ══════════════════════════════════════════════════════════════════════════
-  // BASKETBALL OVERLAY LAYOUT — 4×3 zone grid matching real AS5000 insert
-  // Zone layout (cols × rows of button groups):
-  //   [HOME 2c×3r] | [SHARED 2c×3r] | [GUEST 2c×3r] | [NUMPAD 3c×4r] | [TRANSPORT]
+  // BASKETBALL OVERLAY LAYOUT
   // ══════════════════════════════════════════════════════════════════════════
   if (controllerLayout === "basketball-overlay") {
-
-    // Stable callbacks — these never change reference so memoized buttons won't re-render
-    const cb = {
-      homeScore1:   useCallback(() => act(() => update(p => ({ homeScore: p.homeScore + 1 }))), [act, update]),
-      homeScore2:   useCallback(() => act(() => update(p => ({ homeScore: p.homeScore + 2 }))), [act, update]),
-      homeScore3:   useCallback(() => act(() => update(p => ({ homeScore: p.homeScore + 3 }))), [act, update]),
-      homeScoreMinus: useCallback(() => act(() => update(p => ({ homeScore: Math.max(0, p.homeScore - 1) }))), [act, update]),
-      homeFoulPlus: useCallback(() => act(() => update(p => ({ homeFouls: p.homeFouls + 1 }))), [act, update]),
-      homeFoulMinus: useCallback(() => act(() => update(p => ({ homeFouls: Math.max(0, p.homeFouls - 1) }))), [act, update]),
-      homeTOL:      useCallback(() => act(() => update(p => ({ homeTOL: Math.max(0, p.homeTOL - 1) }))), [act, update]),
-      homePoss:     useCallback(() => update({ possession: "home" }), [update]),
-      homeBonus:    useCallback(() => act(() => update(p => ({ bonus: p.bonus === "home" ? "none" : "home" }))), [act, update]),
-      homeDblBonus: useCallback(() => act(() => update(p => ({ doubleBonus: p.doubleBonus === "home" ? "none" : "home" }))), [act, update]),
-      homeSetShot:  useCallback(() => { setArmedSide("home"); press("SET SHOT"); }, [press]),
-
-      guestScore1:   useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 1 }))), [act, update]),
-      guestScore2:   useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 2 }))), [act, update]),
-      guestScore3:   useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 3 }))), [act, update]),
-      guestScoreMinus: useCallback(() => act(() => update(p => ({ guestScore: Math.max(0, p.guestScore - 1) }))), [act, update]),
-      guestFoulPlus: useCallback(() => act(() => update(p => ({ guestFouls: p.guestFouls + 1 }))), [act, update]),
-      guestFoulMinus: useCallback(() => act(() => update(p => ({ guestFouls: Math.max(0, p.guestFouls - 1) }))), [act, update]),
-      guestTOL:      useCallback(() => act(() => update(p => ({ guestTOL: Math.max(0, p.guestTOL - 1) }))), [act, update]),
-      guestPoss:     useCallback(() => update({ possession: "guest" }), [update]),
-      guestBonus:    useCallback(() => act(() => update(p => ({ bonus: p.bonus === "guest" ? "none" : "guest" }))), [act, update]),
-      guestDblBonus: useCallback(() => act(() => update(p => ({ doubleBonus: p.doubleBonus === "guest" ? "none" : "guest" }))), [act, update]),
-      guestSetShot:  useCallback(() => { setArmedSide("guest"); press("SET SHOT"); }, [press]),
-
-      periodPlus:   useCallback(() => update({ period: state.period + 1 }), [update, state.period]),
-      periodMinus:  useCallback(() => update({ period: Math.max(1, state.period - 1) }), [update, state.period]),
-      setPeriod:    useCallback(() => press("PERIOD"), [press]),
-      setClock:     useCallback(() => press("SET CLOCK"), [press]),
-      setScore:     useCallback(() => setArmedFn("SET SCORE"), []),
-      selHome:      useCallback(() => press("HOME"), [press]),
-      selGuest:     useCallback(() => press("GUEST"), [press]),
-      shotStart:    useCallback(() => press("SHOT START"), [press]),
-      shotStop:     useCallback(() => press("SHOT STOP"), [press]),
-      shot30:       useCallback(() => press("SHOT 30"), [press]),
-      shot14:       useCallback(() => press("SHOT 14"), [press]),
-      setShot:      useCallback(() => setArmedFn("SET SHOT"), []),
-      shotAdjMinus: useCallback(() => update({ shotClockMs: Math.max(0, state.shotClockMs - 1000) }), [update, state.shotClockMs]),
-      shotAdjPlus:  useCallback(() => update({ shotClockMs: state.shotClockMs + 1000 }), [update, state.shotClockMs]),
-
-      horn:  useCallback(() => press("HORN"), [press]),
-      start: useCallback(() => press("START"), [press]),
-      stop:  useCallback(() => press("STOP"), [press]),
-      clrAll: useCallback(() => { setArmedFn(null); setArmedSide(null); setPendingDigits(""); setStatus("READY"); }, []),
-
-      n0: useCallback(() => press("0"), [press]),
-      n1: useCallback(() => press("1"), [press]),
-      n2: useCallback(() => press("2"), [press]),
-      n3: useCallback(() => press("3"), [press]),
-      n4: useCallback(() => press("4"), [press]),
-      n5: useCallback(() => press("5"), [press]),
-      n6: useCallback(() => press("6"), [press]),
-      n7: useCallback(() => press("7"), [press]),
-      n8: useCallback(() => press("8"), [press]),
-      n9: useCallback(() => press("9"), [press]),
-      clr: useCallback(() => press("CLR"), [press]),
-      ent: useCallback(() => press("ENTER"), [press]),
-    };
-
-    const ZONE_W = "clamp(90px, 13.5vw, 134px)";
-    const NUMPAD_W = "clamp(88px, 12.5vw, 122px)";
-    const CTRL_W = "clamp(76px, 10.5vw, 104px)";
-
     return (
       <div className="min-h-screen w-full p-3 md:p-5 flex flex-col items-center justify-center"
         style={{ background: "radial-gradient(ellipse at top, #1a1a1a 0%, #050505 80%)" }}>
@@ -463,14 +460,7 @@ export default function DAS5000Control() {
             </div>
           </div>
 
-          {/* ══ MAIN BUTTON AREA ══════════════════════════════════════════════════ */}
-          {/*
-              Real AS5000 basketball insert is 4 wide × 3 tall button groups.
-              Here we render it as a horizontal strip of 5 zones separated by dividers:
-              [HOME 2×5] | [SHARED 2×5] | [GUEST 2×5] | [NUMPAD 3×4] | [CONTROLS]
-              The HOME/SHARED/GUEST each have 2 columns × 5 rows of square buttons,
-              matching the real insert's color-coded panels.
-          */}
+          {/* ══ MAIN BUTTON AREA ══ */}
           <div className="flex items-start justify-center px-4 pt-4 pb-3 gap-0"
             style={{ background: "linear-gradient(160deg,#c8c8c8 0%,#b4b4b4 100%)" }}>
 
@@ -478,27 +468,22 @@ export default function DAS5000Control() {
             <div style={{ flex: "0 0 auto", width: ZONE_W }}>
               <ZoneLabel label="◄ HOME" color="#22c55e" />
               <Panel width="100%">
-                {/* Row 1 — Score +1 / +2 */}
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <SQ label="SCORE" sub="+1" color="green" onClick={cb.homeScore1} />
                   <SQ label="SCORE" sub="+2" color="green" onClick={cb.homeScore2} />
                 </div>
-                {/* Row 2 — Score +3 / − */}
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <SQ label="SCORE" sub="+3" color="green" onClick={cb.homeScore3} />
                   <SQ label="SCORE" sub="−" color="green" onClick={cb.homeScoreMinus} />
                 </div>
-                {/* Row 3 — Team Fouls + / − */}
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <SQ label="FOULS" sub="+" color="green" onClick={cb.homeFoulPlus} />
                   <SQ label="FOULS" sub="−" color="green" onClick={cb.homeFoulMinus} />
                 </div>
-                {/* Row 4 — TOL / Poss */}
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <SQ label="TIME OUT" sub="TOL −" color="green" onClick={cb.homeTOL} />
                   <SQ label="POSS ►" color="green" onClick={cb.homePoss} active={state.possession === "home"} />
                 </div>
-                {/* Row 5 — Bonus / Set Shot */}
                 <div className="grid grid-cols-2 gap-1">
                   <SQ label="BONUS" color="green" onClick={cb.homeBonus} active={state.bonus === "home"} />
                   <SQ label="SET SHOT" sub="CLK" color="green" onClick={cb.homeSetShot} armed={armedFn === "SET SHOT" && armedSide === "home"} />
@@ -512,7 +497,6 @@ export default function DAS5000Control() {
             <div style={{ flex: "0 0 auto", width: ZONE_W }}>
               <ZoneLabel label="SHARED" color="#a1a1aa" />
               <Panel width="100%">
-                {/* HOME / GUEST selectors — top of shared panel, like real unit */}
                 <div className="grid grid-cols-2 gap-1 mb-2">
                   {[
                     { label: "◄ HOME", side: "home" as Side, bg: "#15532d", on: "#22c55e", border: "#052e16", glow: "rgba(34,197,94,0.45)" },
@@ -537,33 +521,27 @@ export default function DAS5000Control() {
                   ))}
                 </div>
 
-                {/* Row 1 — Set Main Clock / Recall Shot */}
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <SQ label="SET CLOCK" color="white" onClick={cb.setClock} armed={armedFn === "SET CLOCK"} />
                   <SQ label="RECALL SHOT" color="white" onClick={cb.shotStop} />
                 </div>
-                {/* Row 2 — Set Score / Period + */}
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <SQ label="SET SCORE" color="white" onClick={cb.setScore} armed={armedFn === "SET SCORE"} />
                   <SQ label="PERIOD" sub="+1" color="white" onClick={cb.periodPlus} />
                 </div>
-                {/* Row 3 — Shot Start / Shot Stop */}
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <SQ label="SHOT" sub="START" color="white" onClick={cb.shotStart} />
                   <SQ label="SHOT" sub="STOP" color="white" onClick={cb.shotStop} />
                 </div>
-                {/* Row 4 — Shot Reset 1 (30s) / Shot Reset 2 (14s) */}
                 <div className="grid grid-cols-2 gap-1 mb-1">
                   <SQ label="SHOT 30" color="white" onClick={cb.shot30} />
                   <SQ label="SHOT 14" color="white" onClick={cb.shot14} />
                 </div>
-                {/* Row 5 — Set Shot / Set Period */}
                 <div className="grid grid-cols-2 gap-1">
                   <SQ label="SET SHOT" sub="CLK" color="white" onClick={cb.setShot} armed={armedFn === "SET SHOT" && !armedSide} />
                   <SQ label="SET PERIOD" color="white" onClick={cb.setPeriod} armed={armedFn === "PERIOD"} />
                 </div>
 
-                {/* Armed-but-no-side hint */}
                 {armedFn && !armedSide && ["SET SCORE","SET SHOT","DBONUS"].includes(armedFn) && (
                   <div className="mt-1.5 text-center rounded px-1 py-1"
                     style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", fontSize: 8, color: "#fbbf24", fontFamily: "Impact, sans-serif", letterSpacing: "0.05em" }}>
@@ -575,7 +553,7 @@ export default function DAS5000Control() {
 
             <Divider />
 
-            {/* ══ GUEST (red) — mirror of HOME ══ */}
+            {/* ══ GUEST (red) ══ */}
             <div style={{ flex: "0 0 auto", width: ZONE_W }}>
               <ZoneLabel label="GUEST ►" color="#ef4444" />
               <Panel width="100%">
@@ -608,7 +586,6 @@ export default function DAS5000Control() {
             <div style={{ flex: "0 0 auto", width: NUMPAD_W }}>
               <ZoneLabel label="NUMPAD" color="#78716c" />
               <Panel width="100%">
-                {/* Pending display */}
                 <div className="rounded mb-1.5 px-2 py-1 text-center font-mono"
                   style={{
                     background: "#0c0c0c", border: "1px solid #2a2a2a",
@@ -643,8 +620,6 @@ export default function DAS5000Control() {
               <ZoneLabel label="CONTROLS" color="#78716c" />
               <Panel width="100%">
                 <div className="flex flex-col gap-1.5">
-
-                  {/* Arrow diamond — period adj / shot adj / CLR */}
                   <div className="grid grid-cols-3 gap-1" style={{ gridTemplateRows: "repeat(3,1fr)" }}>
                     <div /><AR label="▲" onClick={cb.periodPlus} title="Period +" /><div />
                     <AR label="◄" onClick={cb.shotAdjMinus} title="Shot −1s" />
@@ -660,7 +635,6 @@ export default function DAS5000Control() {
                     <div /><AR label="▼" onClick={cb.periodMinus} title="Period −" /><div />
                   </div>
 
-                  {/* Shot quick resets */}
                   <div className="grid grid-cols-2 gap-1">
                     {[["30s", cb.shot30], ["14s", cb.shot14]].map(([lbl, fn]) => (
                       <button key={lbl as string} onPointerDown={fn as () => void}
@@ -674,7 +648,6 @@ export default function DAS5000Control() {
                     ))}
                   </div>
 
-                  {/* Main transport */}
                   <RB label="◼ HORN" onClick={cb.horn} color="yellow" />
                   <RB label="▶ START" onClick={cb.start} color="green" />
                   <RB label="■ STOP" onClick={cb.stop} color="red" />
@@ -708,7 +681,7 @@ export default function DAS5000Control() {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // STANDARD LAYOUT (unchanged)
+  // STANDARD LAYOUT
   // ══════════════════════════════════════════════════════════════════════════
   return (
     <div className="min-h-screen w-full p-4 md:p-8 flex flex-col items-center justify-center"
