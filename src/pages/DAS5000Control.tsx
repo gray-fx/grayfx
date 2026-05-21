@@ -1,11 +1,203 @@
 import { useDAS5000, formatClock, DSport } from "@/hooks/use-das5000";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
 
 type Side = "home" | "guest";
 type ControllerLayout = "standard" | "basketball-overlay";
 
+// ─── Membrane button — defined OUTSIDE parent so React never remounts it ───────
+const SQ = memo(function SQ({
+  label, sub, color, onClick, armed, active,
+}: {
+  label: string; sub?: string;
+  color: "green" | "red" | "white" | "dark" | "black";
+  onClick: () => void; armed?: boolean; active?: boolean;
+}) {
+  const PALETTE = {
+    green: { base: "#14532d", on: "#16a34a", border: "#052e16", glow: "rgba(34,197,94,0.35)", txt: "#fff" },
+    red:   { base: "#7f1d1d", on: "#dc2626", border: "#450a0a", glow: "rgba(220,38,38,0.35)",  txt: "#fff" },
+    white: { base: "#c0c0c0", on: "#fbbf24", border: "#888",    glow: "rgba(251,191,36,0.3)",  txt: "#111" },
+    dark:  { base: "#3a3a3a", on: "#6b6b6b", border: "#111",    glow: "none",                  txt: "#fbbf24" },
+    black: { base: "#1a1a1a", on: "#374151", border: "#000",    glow: "none",                  txt: "#e4e4e4" },
+  };
+  const p = PALETTE[color];
+  const on = !!(armed || active);
+  return (
+    <button
+      onPointerDown={onClick}
+      className="aspect-square w-full flex flex-col items-center justify-center rounded select-none touch-none"
+      style={{
+        background: on ? p.on : p.base,
+        borderBottom: `3px solid ${p.border}`,
+        boxShadow: on
+          ? `inset 0 1px 0 rgba(255,255,255,0.2), 0 0 10px ${p.glow}`
+          : "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.5)",
+        outline: armed ? "2px solid #fbbf24" : "none",
+        outlineOffset: 2,
+        WebkitUserSelect: "none",
+        userSelect: "none",
+      }}
+    >
+      <span style={{
+        fontFamily: "Impact, 'Arial Narrow', sans-serif",
+        fontSize: "clamp(6px, 1vw, 9px)",
+        color: on && color === "white" ? "#000" : on ? p.txt : p.txt,
+        letterSpacing: "0.04em",
+        lineHeight: 1.1,
+        textAlign: "center",
+        padding: "0 2px",
+        textShadow: color !== "white" ? "0 1px 2px rgba(0,0,0,0.6)" : "none",
+        fontWeight: 900,
+        textTransform: "uppercase",
+      }}>{label}</span>
+      {sub && <span style={{
+        fontFamily: "Impact, 'Arial Narrow', sans-serif",
+        fontSize: "clamp(5px, 0.75vw, 7px)",
+        color: color === "white" ? (on ? "#000" : "#555") : "rgba(255,255,255,0.65)",
+        letterSpacing: "0.02em",
+        marginTop: 2,
+        textAlign: "center",
+        fontWeight: 700,
+        textTransform: "uppercase",
+      }}>{sub}</span>}
+    </button>
+  );
+});
+
+// Rectangular transport button (START / STOP / HORN)
+const RB = memo(function RB({ label, sub, onClick, color }: {
+  label: string; sub?: string; onClick: () => void;
+  color: "green" | "red" | "yellow" | "gray";
+}) {
+  const S = {
+    green:  { bg: "linear-gradient(180deg,#16a34a,#14532d)", border: "#052e16", txt: "#fff", glow: "rgba(22,163,74,0.3)" },
+    red:    { bg: "linear-gradient(180deg,#dc2626,#7f1d1d)", border: "#450a0a", txt: "#fff", glow: "rgba(220,38,38,0.3)" },
+    yellow: { bg: "linear-gradient(180deg,#fde047,#ca8a04)", border: "#713f12", txt: "#000", glow: "rgba(253,224,71,0.25)" },
+    gray:   { bg: "linear-gradient(180deg,#4b4b4b,#2a2a2a)", border: "#111",    txt: "#d4d4d4", glow: "none" },
+  };
+  const c = S[color];
+  return (
+    <button onPointerDown={onClick}
+      className="w-full rounded font-black uppercase tracking-wider flex flex-col items-center justify-center gap-0.5 select-none touch-none"
+      style={{
+        minHeight: 42, background: c.bg, borderBottom: `4px solid ${c.border}`,
+        color: c.txt, fontFamily: "Impact, sans-serif", fontSize: "clamp(9px, 1.1vw, 12px)",
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 3px 8px ${c.glow}`,
+        WebkitUserSelect: "none", userSelect: "none",
+      }}>
+      <span>{label}</span>
+      {sub && <span style={{ fontSize: "clamp(6px, 0.75vw, 8px)", opacity: 0.7 }}>{sub}</span>}
+    </button>
+  );
+});
+
+// Numpad key
+const NK = memo(function NK({ label, onClick, color = "dark" }: {
+  label: string; onClick: () => void; color?: "dark" | "red" | "green";
+}) {
+  const S = {
+    dark:  { bg: "#3d3d3d", border: "#111", txt: "#fbbf24" },
+    red:   { bg: "#991b1b", border: "#450a0a", txt: "#fff" },
+    green: { bg: "#15803d", border: "#052e16", txt: "#fff" },
+  };
+  const c = S[color];
+  return (
+    <button onPointerDown={onClick}
+      className="aspect-square w-full flex items-center justify-center rounded font-black uppercase select-none touch-none"
+      style={{
+        background: c.bg, borderBottom: `3px solid ${c.border}`, color: c.txt,
+        fontFamily: "Impact, sans-serif", fontSize: "clamp(8px, 1.2vw, 12px)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 3px rgba(0,0,0,0.5)",
+        WebkitUserSelect: "none", userSelect: "none",
+      }}>
+      {label}
+    </button>
+  );
+});
+
+// Arrow pad key
+const AR = memo(function AR({ label, onClick, title }: { label: string; onClick: () => void; title?: string }) {
+  return (
+    <button onPointerDown={onClick} title={title}
+      className="aspect-square w-full flex items-center justify-center rounded font-black select-none touch-none"
+      style={{
+        fontFamily: "Impact, sans-serif", fontSize: "clamp(8px, 1.1vw, 11px)",
+        background: "#2e2e2e", borderBottom: "2px solid #111", color: "#d4d4d4",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+        WebkitUserSelect: "none", userSelect: "none",
+      }}>
+      {label}
+    </button>
+  );
+});
+
+// Zone section header label
+function ZoneLabel({ label, color }: { label: string; color: string }) {
+  return (
+    <div className="flex items-center gap-1.5 mb-1.5">
+      <div style={{ width: 3, height: 13, background: color, borderRadius: 2, flexShrink: 0 }} />
+      <span style={{
+        fontFamily: "Impact, 'Arial Narrow', sans-serif",
+        fontSize: "clamp(7px, 0.85vw, 9px)",
+        color, letterSpacing: "0.12em", fontWeight: 900, textTransform: "uppercase",
+      }}>{label}</span>
+    </div>
+  );
+}
+
+// Inset panel bezel
+function Panel({ children, width }: { children: React.ReactNode; width: string }) {
+  return (
+    <div style={{ flex: "0 0 auto", width }}>
+      <div className="rounded-lg p-1.5" style={{
+        background: "linear-gradient(160deg,#1c1c1c,#161616)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        boxShadow: "inset 0 2px 8px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03)",
+        height: "100%",
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Vertical divider between zones
+function Divider() {
+  return (
+    <div style={{ flex: "0 0 14px", alignSelf: "stretch", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 1, height: "80%", background: "linear-gradient(180deg,transparent,rgba(255,255,255,0.1) 20%,rgba(255,255,255,0.1) 80%,transparent)" }} />
+    </div>
+  );
+}
+
+// ─── Standard layout button (unchanged) ────────────────────────────────────────
+function KeyBtn({ label, hint, onClick, color = "gray", armed = false, className = "" }: {
+  label: string; hint?: string; onClick: () => void;
+  color?: "gray"|"red"|"green"|"blue"|"amber"|"dark"; armed?: boolean; className?: string;
+}) {
+  const colorMap: Record<string, string> = {
+    gray:  "from-zinc-600 to-zinc-800 text-zinc-100 border-zinc-900",
+    dark:  "from-zinc-800 to-zinc-950 text-amber-300 border-black",
+    red:   "from-red-600 to-red-900 text-white border-red-950",
+    green: "from-green-600 to-green-900 text-white border-green-950",
+    blue:  "from-blue-700 to-blue-950 text-white border-blue-950",
+    amber: "from-amber-400 to-amber-700 text-black border-amber-900",
+  };
+  return (
+    <button onClick={onClick}
+      className={`relative bg-gradient-to-b ${colorMap[color]} border-b-4 rounded-md py-2.5 px-1 text-[11px] font-bold uppercase tracking-wider transition-all active:translate-y-0.5 active:border-b-2 hover:brightness-110 ${armed ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-zinc-900" : ""} ${className}`}
+      style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 4px rgba(0,0,0,0.5)" }}>
+      <div>{label}</div>
+      {hint && <div className="text-[8px] opacity-60 mt-0.5">{hint}</div>}
+    </button>
+  );
+}
+
+function pad(s: string, n: number) { return (s || "").slice(0, n).padEnd(n, " "); }
+function pad3(n: number) { return String(n).padStart(3, " "); }
+
+// ══════════════════════════════════════════════════════════════════════════════
 export default function DAS5000Control() {
   const { state, update } = useDAS5000(true);
   const [pendingDigits, setPendingDigits] = useState("");
@@ -26,11 +218,11 @@ export default function DAS5000Control() {
       case "SCORE+1": if (side) update(p => ({ [side === "home" ? "homeScore" : "guestScore"]: (side === "home" ? p.homeScore : p.guestScore) + (n ?? 1) })); break;
       case "SCORE+2": if (side) update(p => ({ [side === "home" ? "homeScore" : "guestScore"]: (side === "home" ? p.homeScore : p.guestScore) + 2 })); break;
       case "SCORE+3": if (side) update(p => ({ [side === "home" ? "homeScore" : "guestScore"]: (side === "home" ? p.homeScore : p.guestScore) + 3 })); break;
-      case "SCORE-": if (side) update(p => ({ [side === "home" ? "homeScore" : "guestScore"]: Math.max(0, (side === "home" ? p.homeScore : p.guestScore) - (n ?? 1)) })); break;
+      case "SCORE-":  if (side) update(p => ({ [side === "home" ? "homeScore" : "guestScore"]: Math.max(0, (side === "home" ? p.homeScore : p.guestScore) - (n ?? 1)) })); break;
       case "SET SCORE": if (side && n !== null) update({ [side === "home" ? "homeScore" : "guestScore"]: n } as any); break;
       case "PERIOD": update({ period: n ?? state.period + 1 }); break;
       case "FOUL+": if (side) update(p => ({ [side === "home" ? "homeFouls" : "guestFouls"]: (side === "home" ? p.homeFouls : p.guestFouls) + 1 })); break;
-      case "FOUL-": if (side) update(p => ({ [side === "home" ? "homeFouls" : "guestFouls"]: Math.max(0, (side === "home" ? p.homeFouls : p.guestFouls) - 1) })); break;
+      case "FOUL-":  if (side) update(p => ({ [side === "home" ? "homeFouls" : "guestFouls"]: Math.max(0, (side === "home" ? p.homeFouls : p.guestFouls) - 1) })); break;
       case "TOL": if (side) update(p => ({ [side === "home" ? "homeTOL" : "guestTOL"]: Math.max(0, (side === "home" ? p.homeTOL : p.guestTOL) - 1) })); break;
       case "BONUS": if (side) update({ bonus: state.bonus === side ? "none" : side }); break;
       case "DBONUS": if (side) update({ doubleBonus: state.doubleBonus === side ? "none" : side }); break;
@@ -70,13 +262,13 @@ export default function DAS5000Control() {
     if (key === "CLR") { setPendingDigits(""); setArmedFn(null); setArmedSide(null); setStatus("CLR"); setTimeout(() => setStatus("READY"), 400); return; }
     if (key === "ENTER") { commit(); return; }
     if (key === "START") { update({ clockRunning: true }); return; }
-    if (key === "STOP") { update({ clockRunning: false }); return; }
-    if (key === "HORN") { update({ hornAt: Date.now() }); return; }
+    if (key === "STOP")  { update({ clockRunning: false }); return; }
+    if (key === "HORN")  { update({ hornAt: Date.now() }); return; }
     if (key === "SHOT START") { update({ shotClockRunning: true }); return; }
-    if (key === "SHOT STOP") { update({ shotClockRunning: false }); return; }
+    if (key === "SHOT STOP")  { update({ shotClockRunning: false }); return; }
     if (key === "SHOT 30") { update({ shotClockMs: 30000, shotClockRunning: false }); return; }
     if (key === "SHOT 14") { update({ shotClockMs: 14000, shotClockRunning: false }); return; }
-    if (key === "HOME") { setArmedSide("home"); return; }
+    if (key === "HOME")  { setArmedSide("home"); return; }
     if (key === "GUEST") { setArmedSide("guest"); return; }
     setArmedFn(key);
   }, [commit, update]);
@@ -104,7 +296,7 @@ export default function DAS5000Control() {
   }, [press, state.clockRunning]);
 
   const sharedTop = (
-    <div className="flex justify-between items-center w-full max-w-6xl mb-4">
+    <div className="flex justify-between items-center w-full max-w-7xl mb-4">
       <div>
         <h1 className="text-xl font-black tracking-widest text-yellow-300" style={{ fontFamily: "Impact, sans-serif" }}>
           DAKTRONICS ALL SPORT 5000
@@ -130,195 +322,105 @@ export default function DAS5000Control() {
     </div>
   );
 
-  // ─────────────────────────────────────────────
-  // BASKETBALL OVERLAY LAYOUT
-  // ─────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  // BASKETBALL OVERLAY LAYOUT — 4×3 zone grid matching real AS5000 insert
+  // Zone layout (cols × rows of button groups):
+  //   [HOME 2c×3r] | [SHARED 2c×3r] | [GUEST 2c×3r] | [NUMPAD 3c×4r] | [TRANSPORT]
+  // ══════════════════════════════════════════════════════════════════════════
   if (controllerLayout === "basketball-overlay") {
 
-    const SQ = ({
-      label, sub, color, onClick, armed = false, active = false,
-    }: {
-      label: string; sub?: string; color: "green" | "red" | "white" | "dark";
-      onClick: () => void; armed?: boolean; active?: boolean;
-    }) => {
-      const bg: Record<string, { base: string; on: string; border: string; shadow: string }> = {
-        green: { base: "#14532d", on: "#16a34a", border: "#052e16", shadow: "rgba(34,197,94,0.25)" },
-        red:   { base: "#7f1d1d", on: "#dc2626", border: "#450a0a", shadow: "rgba(239,68,68,0.25)" },
-        white: { base: "#c8c8c8", on: "#fbbf24", border: "#888", shadow: "rgba(251,191,36,0.2)" },
-        dark:  { base: "#3a3a3a", on: "#6b6b6b", border: "#111", shadow: "none" },
-      };
-      const c = bg[color];
-      const isOn = armed || active;
-      return (
-        <button
-          onClick={onClick}
-          className="aspect-square w-full flex flex-col items-center justify-center rounded transition-all active:translate-y-px hover:brightness-125"
-          style={{
-            background: isOn ? c.on : c.base,
-            borderBottom: `3px solid ${c.border}`,
-            boxShadow: isOn
-              ? `inset 0 1px 0 rgba(255,255,255,0.2), 0 0 8px ${c.shadow}`
-              : "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.5)",
-            outline: armed ? "2px solid #fbbf24" : "none",
-            outlineOffset: 2,
-          }}
-        >
-          <span className="font-black uppercase leading-none text-center px-0.5"
-            style={{
-              fontFamily: "Impact, 'Arial Narrow', sans-serif",
-              fontSize: "clamp(6px, 1.05vw, 9px)",
-              color: color === "white" ? (isOn ? "#000" : "#1a1a1a") : "#fff",
-              letterSpacing: "0.04em",
-              lineHeight: 1.1,
-              textShadow: color !== "white" ? "0 1px 2px rgba(0,0,0,0.6)" : "none",
-            }}>
-            {label}
-          </span>
-          {sub && (
-            <span className="font-bold uppercase leading-none text-center px-0.5 mt-0.5"
-              style={{
-                fontFamily: "Impact, 'Arial Narrow', sans-serif",
-                fontSize: "clamp(5px, 0.8vw, 7px)",
-                color: color === "white" ? (isOn ? "#000" : "#555") : "rgba(255,255,255,0.7)",
-                letterSpacing: "0.02em",
-              }}>
-              {sub}
-            </span>
-          )}
-        </button>
-      );
+    // Stable callbacks — these never change reference so memoized buttons won't re-render
+    const cb = {
+      homeScore1:   useCallback(() => act(() => update(p => ({ homeScore: p.homeScore + 1 }))), [act, update]),
+      homeScore2:   useCallback(() => act(() => update(p => ({ homeScore: p.homeScore + 2 }))), [act, update]),
+      homeScore3:   useCallback(() => act(() => update(p => ({ homeScore: p.homeScore + 3 }))), [act, update]),
+      homeScoreMinus: useCallback(() => act(() => update(p => ({ homeScore: Math.max(0, p.homeScore - 1) }))), [act, update]),
+      homeFoulPlus: useCallback(() => act(() => update(p => ({ homeFouls: p.homeFouls + 1 }))), [act, update]),
+      homeFoulMinus: useCallback(() => act(() => update(p => ({ homeFouls: Math.max(0, p.homeFouls - 1) }))), [act, update]),
+      homeTOL:      useCallback(() => act(() => update(p => ({ homeTOL: Math.max(0, p.homeTOL - 1) }))), [act, update]),
+      homePoss:     useCallback(() => update({ possession: "home" }), [update]),
+      homeBonus:    useCallback(() => act(() => update(p => ({ bonus: p.bonus === "home" ? "none" : "home" }))), [act, update]),
+      homeDblBonus: useCallback(() => act(() => update(p => ({ doubleBonus: p.doubleBonus === "home" ? "none" : "home" }))), [act, update]),
+      homeSetShot:  useCallback(() => { setArmedSide("home"); press("SET SHOT"); }, [press]),
+
+      guestScore1:   useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 1 }))), [act, update]),
+      guestScore2:   useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 2 }))), [act, update]),
+      guestScore3:   useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 3 }))), [act, update]),
+      guestScoreMinus: useCallback(() => act(() => update(p => ({ guestScore: Math.max(0, p.guestScore - 1) }))), [act, update]),
+      guestFoulPlus: useCallback(() => act(() => update(p => ({ guestFouls: p.guestFouls + 1 }))), [act, update]),
+      guestFoulMinus: useCallback(() => act(() => update(p => ({ guestFouls: Math.max(0, p.guestFouls - 1) }))), [act, update]),
+      guestTOL:      useCallback(() => act(() => update(p => ({ guestTOL: Math.max(0, p.guestTOL - 1) }))), [act, update]),
+      guestPoss:     useCallback(() => update({ possession: "guest" }), [update]),
+      guestBonus:    useCallback(() => act(() => update(p => ({ bonus: p.bonus === "guest" ? "none" : "guest" }))), [act, update]),
+      guestDblBonus: useCallback(() => act(() => update(p => ({ doubleBonus: p.doubleBonus === "guest" ? "none" : "guest" }))), [act, update]),
+      guestSetShot:  useCallback(() => { setArmedSide("guest"); press("SET SHOT"); }, [press]),
+
+      periodPlus:   useCallback(() => update({ period: state.period + 1 }), [update, state.period]),
+      periodMinus:  useCallback(() => update({ period: Math.max(1, state.period - 1) }), [update, state.period]),
+      setPeriod:    useCallback(() => press("PERIOD"), [press]),
+      setClock:     useCallback(() => press("SET CLOCK"), [press]),
+      setScore:     useCallback(() => setArmedFn("SET SCORE"), []),
+      selHome:      useCallback(() => press("HOME"), [press]),
+      selGuest:     useCallback(() => press("GUEST"), [press]),
+      shotStart:    useCallback(() => press("SHOT START"), [press]),
+      shotStop:     useCallback(() => press("SHOT STOP"), [press]),
+      shot30:       useCallback(() => press("SHOT 30"), [press]),
+      shot14:       useCallback(() => press("SHOT 14"), [press]),
+      setShot:      useCallback(() => setArmedFn("SET SHOT"), []),
+      shotAdjMinus: useCallback(() => update({ shotClockMs: Math.max(0, state.shotClockMs - 1000) }), [update, state.shotClockMs]),
+      shotAdjPlus:  useCallback(() => update({ shotClockMs: state.shotClockMs + 1000 }), [update, state.shotClockMs]),
+
+      horn:  useCallback(() => press("HORN"), [press]),
+      start: useCallback(() => press("START"), [press]),
+      stop:  useCallback(() => press("STOP"), [press]),
+      clrAll: useCallback(() => { setArmedFn(null); setArmedSide(null); setPendingDigits(""); setStatus("READY"); }, []),
+
+      n0: useCallback(() => press("0"), [press]),
+      n1: useCallback(() => press("1"), [press]),
+      n2: useCallback(() => press("2"), [press]),
+      n3: useCallback(() => press("3"), [press]),
+      n4: useCallback(() => press("4"), [press]),
+      n5: useCallback(() => press("5"), [press]),
+      n6: useCallback(() => press("6"), [press]),
+      n7: useCallback(() => press("7"), [press]),
+      n8: useCallback(() => press("8"), [press]),
+      n9: useCallback(() => press("9"), [press]),
+      clr: useCallback(() => press("CLR"), [press]),
+      ent: useCallback(() => press("ENTER"), [press]),
     };
 
-    const NQ = ({ label, onClick, color = "dark" }: { label: string; onClick: () => void; color?: "dark" | "red" | "green" }) => {
-      const styles: Record<string, { bg: string; border: string; text: string }> = {
-        dark:  { bg: "#444", border: "#111", text: "#fbbf24" },
-        red:   { bg: "#991b1b", border: "#450a0a", text: "#fff" },
-        green: { bg: "#15803d", border: "#052e16", text: "#fff" },
-      };
-      const s = styles[color];
-      return (
-        <button onClick={onClick}
-          className="aspect-square w-full flex items-center justify-center rounded font-black uppercase transition-all active:translate-y-px hover:brightness-115"
-          style={{
-            background: s.bg,
-            borderBottom: `3px solid ${s.border}`,
-            color: s.text,
-            fontFamily: "Impact, sans-serif",
-            fontSize: "clamp(8px, 1.3vw, 12px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 3px rgba(0,0,0,0.5)",
-          }}>
-          {label}
-        </button>
-      );
-    };
-
-    // Rectangular tall button for right side controls
-    const RB = ({ label, sub, onClick, color }: { label: string; sub?: string; onClick: () => void; color: "green" | "red" | "yellow" | "gray" }) => {
-      const s: Record<string, { bg: string; border: string; text: string; shadow: string }> = {
-        green:  { bg: "linear-gradient(180deg,#16a34a,#14532d)", border: "#052e16", text: "#fff", shadow: "rgba(22,163,74,0.3)" },
-        red:    { bg: "linear-gradient(180deg,#dc2626,#7f1d1d)", border: "#450a0a", text: "#fff", shadow: "rgba(220,38,38,0.3)" },
-        yellow: { bg: "linear-gradient(180deg,#fde047,#ca8a04)", border: "#713f12", text: "#000", shadow: "rgba(253,224,71,0.3)" },
-        gray:   { bg: "linear-gradient(180deg,#4b4b4b,#2a2a2a)", border: "#111", text: "#d4d4d4", shadow: "none" },
-      };
-      const c = s[color];
-      return (
-        <button onClick={onClick}
-          className="w-full rounded font-black uppercase tracking-wider transition-all active:translate-y-0.5 hover:brightness-110 flex flex-col items-center justify-center gap-0.5"
-          style={{
-            minHeight: 44,
-            background: c.bg,
-            borderBottom: `4px solid ${c.border}`,
-            color: c.text,
-            fontFamily: "Impact, sans-serif",
-            fontSize: "clamp(9px, 1.2vw, 13px)",
-            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 10px ${c.shadow}`,
-          }}>
-          <span>{label}</span>
-          {sub && <span style={{ fontSize: "clamp(7px, 0.85vw, 9px)", opacity: 0.75 }}>{sub}</span>}
-        </button>
-      );
-    };
-
-    const AR = ({ label, onClick, title }: { label: string; onClick: () => void; title?: string }) => (
-      <button onClick={onClick} title={title}
-        className="aspect-square w-full flex items-center justify-center rounded font-black hover:brightness-115 active:translate-y-px"
-        style={{
-          fontFamily: "Impact, sans-serif",
-          fontSize: "clamp(8px, 1.2vw, 11px)",
-          background: "#3a3a3a",
-          borderBottom: "2px solid #111",
-          color: "#e4e4e4",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
-        }}>
-        {label}
-      </button>
-    );
-
-    // Panel wrapper with label and accent bar
-    const Panel = ({ label, accent, children, width }: { label: string; accent: string; children: React.ReactNode; width: string }) => (
-      <div style={{ flex: `0 0 auto`, width }}>
-        {/* Zone label */}
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <div style={{ width: 3, height: 14, background: accent, borderRadius: 2, flexShrink: 0 }} />
-          <span className="font-black uppercase tracking-widest"
-            style={{
-              fontFamily: "Impact, 'Arial Narrow', sans-serif",
-              fontSize: "clamp(8px, 0.9vw, 10px)",
-              color: accent,
-              letterSpacing: "0.12em",
-            }}>
-            {label}
-          </span>
-        </div>
-        {/* Inset panel */}
-        <div className="rounded-lg p-2"
-          style={{
-            background: "linear-gradient(160deg, #1c1c1c, #161616)",
-            border: "1px solid rgba(255,255,255,0.06)",
-            boxShadow: "inset 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
-          }}>
-          {children}
-        </div>
-      </div>
-    );
-
-    // Vertical gutter / separator
-    const Sep = () => (
-      <div style={{ flex: "0 0 auto", width: 16, display: "flex", alignItems: "stretch", justifyContent: "center", paddingTop: 24 }}>
-        <div style={{ width: 1, background: "linear-gradient(180deg, transparent, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.08) 80%, transparent)" }} />
-      </div>
-    );
+    const ZONE_W = "clamp(90px, 13.5vw, 134px)";
+    const NUMPAD_W = "clamp(88px, 12.5vw, 122px)";
+    const CTRL_W = "clamp(76px, 10.5vw, 104px)";
 
     return (
       <div className="min-h-screen w-full p-3 md:p-5 flex flex-col items-center justify-center"
         style={{ background: "radial-gradient(ellipse at top, #1a1a1a 0%, #050505 80%)" }}>
         {sharedTop}
 
-        {/* Console chassis */}
-        <div className="w-full max-w-6xl rounded-xl overflow-hidden"
+        {/* ── Console chassis ── */}
+        <div className="w-full max-w-7xl rounded-xl overflow-hidden"
           style={{
-            background: "linear-gradient(160deg, #d6d6d6 0%, #b0b0b0 50%, #c0c0c0 100%)",
+            background: "linear-gradient(165deg,#d8d8d8 0%,#b8b8b8 55%,#c4c4c4 100%)",
             border: "2px solid #888",
-            boxShadow: "0 30px 80px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -2px 0 rgba(0,0,0,0.2)",
+            boxShadow: "0 32px 90px rgba(0,0,0,0.92), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -2px 0 rgba(0,0,0,0.2)",
           }}>
 
-          {/* ── TOP BEZEL: Brand + LCD + Config ── */}
+          {/* ── TOP BEZEL: branding + LCD + config ── */}
           <div className="flex items-center gap-4 px-5 py-3"
             style={{
-              background: "linear-gradient(180deg, #e0e0e0 0%, #c8c8c8 100%)",
+              background: "linear-gradient(180deg,#e2e2e2 0%,#cacaca 100%)",
               borderBottom: "2px solid #999",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
             }}>
-
             <div className="shrink-0">
               <div className="font-black tracking-widest text-zinc-600 leading-none" style={{ fontFamily: "Impact, sans-serif", fontSize: 13 }}>DAKTRONICS</div>
-              <div className="text-zinc-500 tracking-widest font-bold" style={{ fontSize: 8 }}>ALL SPORT® 5000</div>
+              <div className="font-bold tracking-widest text-zinc-500" style={{ fontSize: 8 }}>ALL SPORT® 5000</div>
             </div>
 
             {/* LCD */}
             <div className="rounded px-3 py-2 shrink-0"
               style={{
-                background: "linear-gradient(180deg, #4a6b28 0%, #5a7e32 100%)",
+                background: "linear-gradient(180deg,#4a6b28,#5a7e32)",
                 border: "2px solid #333",
                 boxShadow: "inset 0 3px 10px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.3)",
               }}>
@@ -328,13 +430,12 @@ export default function DAS5000Control() {
                   fontSize: "clamp(10px, 1.3vw, 14px)",
                   letterSpacing: "0.08em",
                   color: "#1a1a1a",
-                  textShadow: "0 0 4px rgba(0,0,0,0.3)",
                 }}>
                 {lcdL1.padEnd(20, " ")}{"\n"}{lcdL2.padEnd(20, " ")}
               </div>
             </div>
 
-            {/* Config selects */}
+            {/* Config */}
             <div className="flex gap-3 flex-1 justify-center flex-wrap">
               {([
                 ["Sport", <select key="sport" value={state.sport} onChange={e => update({ sport: e.target.value as DSport })}
@@ -343,13 +444,14 @@ export default function DAS5000Control() {
                 </select>],
                 ["Layout", <select key="layout" value={state.layout} onChange={e => update({ layout: e.target.value as any })}
                   className="bg-zinc-900 border border-zinc-700 rounded px-1.5 py-1 text-amber-300 text-xs font-mono">
-                  {[["indoor-bball","Indoor Bball"],["indoor-bball-fouls","Bball+Fouls"],["outdoor-football","Football"],["hockey","Hockey"],["soccer","Soccer"],["baseball","Baseball"],["minimal","Minimal"]].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                  {[["indoor-bball","Indoor Bball"],["indoor-bball-fouls","Bball+Fouls"],["outdoor-football","Football"],["hockey","Hockey"],["soccer","Soccer"],["baseball","Baseball"],["minimal","Minimal"]].map(([v,l]) =>
+                    <option key={v} value={v}>{l}</option>)}
                 </select>],
                 ["Home", <input key="home" value={state.homeName} maxLength={8} onChange={e => update({ homeName: e.target.value.toUpperCase() })} className="w-16 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-1 text-amber-300 text-xs font-mono" />],
                 ["Guest", <input key="guest" value={state.guestName} maxLength={8} onChange={e => update({ guestName: e.target.value.toUpperCase() })} className="w-16 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-1 text-amber-300 text-xs font-mono" />],
-              ] as [string, React.ReactNode][]).map(([label, el]) => (
-                <div key={label} className="flex flex-col gap-0.5">
-                  <span className="font-bold uppercase tracking-wider text-zinc-500" style={{ fontSize: 9 }}>{label}</span>
+              ] as [string, React.ReactNode][]).map(([lbl, el]) => (
+                <div key={lbl as string} className="flex flex-col gap-0.5">
+                  <span className="font-bold uppercase tracking-wider text-zinc-500" style={{ fontSize: 9 }}>{lbl}</span>
                   {el}
                 </div>
               ))}
@@ -361,269 +463,240 @@ export default function DAS5000Control() {
             </div>
           </div>
 
-          {/* ── MAIN BUTTON AREA ── */}
-          <div className="flex items-start justify-center px-5 py-4 gap-0"
-            style={{ background: "linear-gradient(160deg, #c8c8c8 0%, #b0b0b0 100%)" }}>
+          {/* ══ MAIN BUTTON AREA ══════════════════════════════════════════════════ */}
+          {/*
+              Real AS5000 basketball insert is 4 wide × 3 tall button groups.
+              Here we render it as a horizontal strip of 5 zones separated by dividers:
+              [HOME 2×5] | [SHARED 2×5] | [GUEST 2×5] | [NUMPAD 3×4] | [CONTROLS]
+              The HOME/SHARED/GUEST each have 2 columns × 5 rows of square buttons,
+              matching the real insert's color-coded panels.
+          */}
+          <div className="flex items-start justify-center px-4 pt-4 pb-3 gap-0"
+            style={{ background: "linear-gradient(160deg,#c8c8c8 0%,#b4b4b4 100%)" }}>
 
-            {/* ═══ HOME PANEL (green) ═══ */}
-            <Panel label="◄ HOME" accent="#22c55e" width="clamp(96px, 14vw, 138px)">
-              <div className="grid grid-cols-2 gap-1">
-                {/* Score column */}
-                <SQ label="SCORE" sub="+1" color="green"
-                  onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 1 })))} />
-                <SQ label="SCORE" sub="+2" color="green"
-                  onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 2 })))} />
-                <SQ label="SCORE" sub="+3" color="green"
-                  onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 3 })))} />
-                <SQ label="SCORE" sub="−" color="green"
-                  onClick={() => act(() => update(p => ({ homeScore: Math.max(0, p.homeScore - 1) })))} />
-                {/* Fouls column */}
-                <SQ label="FOULS" sub="+" color="green"
-                  onClick={() => act(() => update(p => ({ homeFouls: p.homeFouls + 1 })))} />
-                <SQ label="FOULS" sub="−" color="green"
-                  onClick={() => act(() => update(p => ({ homeFouls: Math.max(0, p.homeFouls - 1) })))} />
-                {/* Possession / Bonus */}
-                <SQ label="POSS ►" color="green"
-                  onClick={() => update({ possession: "home" })}
-                  active={state.possession === "home"} />
-                <SQ label="BONUS" color="green"
-                  onClick={() => act(() => update(p => ({ bonus: p.bonus === "home" ? "none" : "home" })))}
-                  active={state.bonus === "home"} />
-                {/* TOL / Player fouls */}
-                <SQ label="TIME OUT" sub="TOL −" color="green"
-                  onClick={() => act(() => update(p => ({ homeTOL: Math.max(0, p.homeTOL - 1) })))} />
-                <SQ label="SHOT CLK" sub="SET" color="green"
-                  onClick={() => { setArmedSide("home"); press("SET SHOT"); }}
-                  armed={armedFn === "SET SHOT" && armedSide === "home"} />
-              </div>
-            </Panel>
-
-            <Sep />
-
-            {/* ═══ SHARED / NEUTRAL PANEL ═══ */}
-            <Panel label="SHARED" accent="#a1a1aa" width="clamp(96px, 14vw, 138px)">
-              {/* HOME / GUEST selectors at the top — key for arming side on shared functions */}
-              <div className="grid grid-cols-2 gap-1 mb-2">
-                <button
-                  onClick={() => press("HOME")}
-                  className="rounded font-black uppercase tracking-wider transition-all active:translate-y-px hover:brightness-110 flex items-center justify-center"
-                  style={{
-                    height: 28,
-                    fontFamily: "Impact, 'Arial Narrow', sans-serif",
-                    fontSize: "clamp(7px, 0.95vw, 10px)",
-                    background: armedSide === "home" ? "#22c55e" : "#15532d",
-                    borderBottom: "3px solid #052e16",
-                    color: "#fff",
-                    boxShadow: armedSide === "home" ? "0 0 8px rgba(34,197,94,0.5)" : "inset 0 1px 0 rgba(255,255,255,0.1)",
-                    outline: armedSide === "home" ? "2px solid #fbbf24" : "none",
-                    outlineOffset: 2,
-                  }}>
-                  ◄ HOME
-                </button>
-                <button
-                  onClick={() => press("GUEST")}
-                  className="rounded font-black uppercase tracking-wider transition-all active:translate-y-px hover:brightness-110 flex items-center justify-center"
-                  style={{
-                    height: 28,
-                    fontFamily: "Impact, 'Arial Narrow', sans-serif",
-                    fontSize: "clamp(7px, 0.95vw, 10px)",
-                    background: armedSide === "guest" ? "#dc2626" : "#7f1d1d",
-                    borderBottom: "3px solid #450a0a",
-                    color: "#fff",
-                    boxShadow: armedSide === "guest" ? "0 0 8px rgba(220,38,38,0.5)" : "inset 0 1px 0 rgba(255,255,255,0.1)",
-                    outline: armedSide === "guest" ? "2px solid #fbbf24" : "none",
-                    outlineOffset: 2,
-                  }}>
-                  GUEST ►
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-1">
-                {/* SET SCORE — needs side selected first */}
-                <SQ label="SET SCORE" color="white"
-                  onClick={() => setArmedFn("SET SCORE")}
-                  armed={armedFn === "SET SCORE"} />
-                {/* SET CLOCK — no side needed */}
-                <SQ label="SET CLOCK" color="white"
-                  onClick={() => press("SET CLOCK")}
-                  armed={armedFn === "SET CLOCK"} />
-                {/* Period */}
-                <SQ label="PERIOD" sub="+" color="white"
-                  onClick={() => update({ period: state.period + 1 })} />
-                <SQ label="SET PERIOD" color="white"
-                  onClick={() => press("PERIOD")}
-                  armed={armedFn === "PERIOD"} />
-                {/* Shot clock controls */}
-                <SQ label="SHOT" sub="START" color="white"
-                  onClick={() => press("SHOT START")} />
-                <SQ label="SHOT" sub="STOP" color="white"
-                  onClick={() => press("SHOT STOP")} />
-                <SQ label="SHOT 30" color="white"
-                  onClick={() => press("SHOT 30")} />
-                <SQ label="SHOT 14" color="white"
-                  onClick={() => press("SHOT 14")} />
-                {/* SET SHOT — needs side */}
-                <SQ label="SET SHOT" sub="CLK" color="white"
-                  onClick={() => setArmedFn("SET SHOT")}
-                  armed={armedFn === "SET SHOT" && !armedSide} />
-                {/* DBL Bonus — needs side */}
-                <SQ label="DBL BONUS" color="white"
-                  onClick={() => setArmedFn("DBONUS")}
-                  armed={armedFn === "DBONUS"} />
-              </div>
-
-              {/* Hint: select team first for these functions */}
-              {armedFn && !armedSide && ["SET SCORE","DBONUS","SET SHOT"].includes(armedFn) && (
-                <div className="mt-1.5 text-center rounded px-1 py-1"
-                  style={{ background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.35)", fontSize: 8, color: "#fbbf24", fontFamily: "Impact, sans-serif", letterSpacing: "0.06em" }}>
-                  ▲ SELECT HOME or GUEST ▲
+            {/* ══ HOME (green) ══ */}
+            <div style={{ flex: "0 0 auto", width: ZONE_W }}>
+              <ZoneLabel label="◄ HOME" color="#22c55e" />
+              <Panel width="100%">
+                {/* Row 1 — Score +1 / +2 */}
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="SCORE" sub="+1" color="green" onClick={cb.homeScore1} />
+                  <SQ label="SCORE" sub="+2" color="green" onClick={cb.homeScore2} />
                 </div>
-              )}
-            </Panel>
-
-            <Sep />
-
-            {/* ═══ GUEST PANEL (red) — mirror of HOME ═══ */}
-            <Panel label="GUEST ►" accent="#ef4444" width="clamp(96px, 14vw, 138px)">
-              <div className="grid grid-cols-2 gap-1">
-                <SQ label="SCORE" sub="+1" color="red"
-                  onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 1 })))} />
-                <SQ label="SCORE" sub="+2" color="red"
-                  onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 2 })))} />
-                <SQ label="SCORE" sub="+3" color="red"
-                  onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 3 })))} />
-                <SQ label="SCORE" sub="−" color="red"
-                  onClick={() => act(() => update(p => ({ guestScore: Math.max(0, p.guestScore - 1) })))} />
-                <SQ label="FOULS" sub="+" color="red"
-                  onClick={() => act(() => update(p => ({ guestFouls: p.guestFouls + 1 })))} />
-                <SQ label="FOULS" sub="−" color="red"
-                  onClick={() => act(() => update(p => ({ guestFouls: Math.max(0, p.guestFouls - 1) })))} />
-                <SQ label="◄ POSS" color="red"
-                  onClick={() => update({ possession: "guest" })}
-                  active={state.possession === "guest"} />
-                <SQ label="BONUS" color="red"
-                  onClick={() => act(() => update(p => ({ bonus: p.bonus === "guest" ? "none" : "guest" })))}
-                  active={state.bonus === "guest"} />
-                <SQ label="TIME OUT" sub="TOL −" color="red"
-                  onClick={() => act(() => update(p => ({ guestTOL: Math.max(0, p.guestTOL - 1) })))} />
-                <SQ label="SHOT CLK" sub="SET" color="red"
-                  onClick={() => { setArmedSide("guest"); press("SET SHOT"); }}
-                  armed={armedFn === "SET SHOT" && armedSide === "guest"} />
-              </div>
-            </Panel>
-
-            <Sep />
-
-            {/* ═══ NUMPAD ═══ */}
-            <Panel label="NUMPAD" accent="#78716c" width="clamp(96px, 13vw, 128px)">
-              {/* Pending display */}
-              <div className="rounded mb-1.5 px-2 py-1 text-center font-mono"
-                style={{
-                  background: "#0d0d0d",
-                  border: "1px solid #333",
-                  color: pendingDigits ? "#fbbf24" : armedFn ? "#d4d4d4" : "#444",
-                  fontSize: "clamp(9px, 1.2vw, 13px)",
-                  minHeight: 24,
-                  fontFamily: "'Courier New', monospace",
-                  letterSpacing: "0.08em",
-                  boxShadow: "inset 0 2px 6px rgba(0,0,0,0.8)",
-                }}>
-                {pendingDigits || (armedFn ? armedFn.slice(0, 9) : "──────")}
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                {["7","8","9","4","5","6","1","2","3"].map(n =>
-                  <NQ key={n} label={n} onClick={() => press(n)} />)}
-                <NQ label="CLR" onClick={() => press("CLR")} color="red" />
-                <NQ label="0" onClick={() => press("0")} />
-                <NQ label="ENT" onClick={() => press("ENTER")} color="green" />
-              </div>
-            </Panel>
-
-            <Sep />
-
-            {/* ═══ CONTROLS COLUMN ═══ */}
-            <Panel label="CONTROLS" accent="#78716c" width="clamp(80px, 11vw, 108px)">
-              <div className="flex flex-col gap-1.5">
-
-                {/* Arrow diamond — period and shot adj */}
-                <div className="grid grid-cols-3 gap-1" style={{ gridTemplateRows: "repeat(3, 1fr)" }}>
-                  <div />
-                  <AR label="▲" onClick={() => update({ period: state.period + 1 })} title="Period +" />
-                  <div />
-                  <AR label="◄" onClick={() => update({ shotClockMs: Math.max(0, state.shotClockMs - 1000) })} title="Shot −1s" />
-                  <button
-                    onClick={() => { setArmedFn(null); setArmedSide(null); setPendingDigits(""); setStatus("READY"); }}
-                    className="aspect-square w-full flex items-center justify-center rounded font-black hover:brightness-110 active:translate-y-px"
-                    style={{
-                      fontFamily: "Impact, sans-serif",
-                      fontSize: "clamp(7px, 0.9vw, 9px)",
-                      background: "#2a2a2a",
-                      borderBottom: "2px solid #111",
-                      color: "#a1a1aa",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-                    }}>
-                    CLR
-                  </button>
-                  <AR label="►" onClick={() => update({ shotClockMs: state.shotClockMs + 1000 })} title="Shot +1s" />
-                  <div />
-                  <AR label="▼" onClick={() => update({ period: Math.max(1, state.period - 1) })} title="Period −" />
-                  <div />
+                {/* Row 2 — Score +3 / − */}
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="SCORE" sub="+3" color="green" onClick={cb.homeScore3} />
+                  <SQ label="SCORE" sub="−" color="green" onClick={cb.homeScoreMinus} />
                 </div>
-
-                {/* Shot quick resets */}
+                {/* Row 3 — Team Fouls + / − */}
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="FOULS" sub="+" color="green" onClick={cb.homeFoulPlus} />
+                  <SQ label="FOULS" sub="−" color="green" onClick={cb.homeFoulMinus} />
+                </div>
+                {/* Row 4 — TOL / Poss */}
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="TIME OUT" sub="TOL −" color="green" onClick={cb.homeTOL} />
+                  <SQ label="POSS ►" color="green" onClick={cb.homePoss} active={state.possession === "home"} />
+                </div>
+                {/* Row 5 — Bonus / Set Shot */}
                 <div className="grid grid-cols-2 gap-1">
-                  <button onClick={() => press("SHOT 30")}
-                    className="rounded font-black uppercase hover:brightness-110 active:translate-y-px flex items-center justify-center"
-                    style={{
-                      height: 28,
-                      fontFamily: "Impact, sans-serif",
-                      fontSize: "clamp(7px, 0.9vw, 10px)",
-                      background: "#3a3a3a",
-                      borderBottom: "2px solid #111",
-                      color: "#d4d4d4",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
-                    }}>
-                    30s
-                  </button>
-                  <button onClick={() => press("SHOT 14")}
-                    className="rounded font-black uppercase hover:brightness-110 active:translate-y-px flex items-center justify-center"
-                    style={{
-                      height: 28,
-                      fontFamily: "Impact, sans-serif",
-                      fontSize: "clamp(7px, 0.9vw, 10px)",
-                      background: "#3a3a3a",
-                      borderBottom: "2px solid #111",
-                      color: "#d4d4d4",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
-                    }}>
-                    14s
-                  </button>
+                  <SQ label="BONUS" color="green" onClick={cb.homeBonus} active={state.bonus === "home"} />
+                  <SQ label="SET SHOT" sub="CLK" color="green" onClick={cb.homeSetShot} armed={armedFn === "SET SHOT" && armedSide === "home"} />
+                </div>
+              </Panel>
+            </div>
+
+            <Divider />
+
+            {/* ══ SHARED (white/grey) ══ */}
+            <div style={{ flex: "0 0 auto", width: ZONE_W }}>
+              <ZoneLabel label="SHARED" color="#a1a1aa" />
+              <Panel width="100%">
+                {/* HOME / GUEST selectors — top of shared panel, like real unit */}
+                <div className="grid grid-cols-2 gap-1 mb-2">
+                  {[
+                    { label: "◄ HOME", side: "home" as Side, bg: "#15532d", on: "#22c55e", border: "#052e16", glow: "rgba(34,197,94,0.45)" },
+                    { label: "GUEST ►", side: "guest" as Side, bg: "#7f1d1d", on: "#dc2626", border: "#450a0a", glow: "rgba(220,38,38,0.45)" },
+                  ].map(({ label, side, bg, on, border, glow }) => (
+                    <button key={side} onPointerDown={side === "home" ? cb.selHome : cb.selGuest}
+                      className="rounded font-black uppercase tracking-wider flex items-center justify-center select-none touch-none"
+                      style={{
+                        height: 28,
+                        fontFamily: "Impact, 'Arial Narrow', sans-serif",
+                        fontSize: "clamp(7px, 0.9vw, 9px)",
+                        background: armedSide === side ? on : bg,
+                        borderBottom: `3px solid ${border}`,
+                        color: "#fff",
+                        boxShadow: armedSide === side ? `0 0 10px ${glow}` : "inset 0 1px 0 rgba(255,255,255,0.1)",
+                        outline: armedSide === side ? "2px solid #fbbf24" : "none",
+                        outlineOffset: 2,
+                        WebkitUserSelect: "none", userSelect: "none",
+                      }}>
+                      {label}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Main action buttons */}
-                <RB label="◼ HORN" onClick={() => press("HORN")} color="yellow" />
-                <RB label="▶ START" sub="SPACE" onClick={() => press("START")} color="green" />
-                <RB label="■ STOP" sub="SPACE" onClick={() => press("STOP")} color="red" />
-              </div>
-            </Panel>
+                {/* Row 1 — Set Main Clock / Recall Shot */}
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="SET CLOCK" color="white" onClick={cb.setClock} armed={armedFn === "SET CLOCK"} />
+                  <SQ label="RECALL SHOT" color="white" onClick={cb.shotStop} />
+                </div>
+                {/* Row 2 — Set Score / Period + */}
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="SET SCORE" color="white" onClick={cb.setScore} armed={armedFn === "SET SCORE"} />
+                  <SQ label="PERIOD" sub="+1" color="white" onClick={cb.periodPlus} />
+                </div>
+                {/* Row 3 — Shot Start / Shot Stop */}
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="SHOT" sub="START" color="white" onClick={cb.shotStart} />
+                  <SQ label="SHOT" sub="STOP" color="white" onClick={cb.shotStop} />
+                </div>
+                {/* Row 4 — Shot Reset 1 (30s) / Shot Reset 2 (14s) */}
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="SHOT 30" color="white" onClick={cb.shot30} />
+                  <SQ label="SHOT 14" color="white" onClick={cb.shot14} />
+                </div>
+                {/* Row 5 — Set Shot / Set Period */}
+                <div className="grid grid-cols-2 gap-1">
+                  <SQ label="SET SHOT" sub="CLK" color="white" onClick={cb.setShot} armed={armedFn === "SET SHOT" && !armedSide} />
+                  <SQ label="SET PERIOD" color="white" onClick={cb.setPeriod} armed={armedFn === "PERIOD"} />
+                </div>
+
+                {/* Armed-but-no-side hint */}
+                {armedFn && !armedSide && ["SET SCORE","SET SHOT","DBONUS"].includes(armedFn) && (
+                  <div className="mt-1.5 text-center rounded px-1 py-1"
+                    style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", fontSize: 8, color: "#fbbf24", fontFamily: "Impact, sans-serif", letterSpacing: "0.05em" }}>
+                    ▲ SELECT HOME or GUEST ▲
+                  </div>
+                )}
+              </Panel>
+            </div>
+
+            <Divider />
+
+            {/* ══ GUEST (red) — mirror of HOME ══ */}
+            <div style={{ flex: "0 0 auto", width: ZONE_W }}>
+              <ZoneLabel label="GUEST ►" color="#ef4444" />
+              <Panel width="100%">
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="SCORE" sub="+1" color="red" onClick={cb.guestScore1} />
+                  <SQ label="SCORE" sub="+2" color="red" onClick={cb.guestScore2} />
+                </div>
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="SCORE" sub="+3" color="red" onClick={cb.guestScore3} />
+                  <SQ label="SCORE" sub="−" color="red" onClick={cb.guestScoreMinus} />
+                </div>
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="FOULS" sub="+" color="red" onClick={cb.guestFoulPlus} />
+                  <SQ label="FOULS" sub="−" color="red" onClick={cb.guestFoulMinus} />
+                </div>
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="TIME OUT" sub="TOL −" color="red" onClick={cb.guestTOL} />
+                  <SQ label="◄ POSS" color="red" onClick={cb.guestPoss} active={state.possession === "guest"} />
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  <SQ label="BONUS" color="red" onClick={cb.guestBonus} active={state.bonus === "guest"} />
+                  <SQ label="SET SHOT" sub="CLK" color="red" onClick={cb.guestSetShot} armed={armedFn === "SET SHOT" && armedSide === "guest"} />
+                </div>
+              </Panel>
+            </div>
+
+            <Divider />
+
+            {/* ══ NUMPAD ══ */}
+            <div style={{ flex: "0 0 auto", width: NUMPAD_W }}>
+              <ZoneLabel label="NUMPAD" color="#78716c" />
+              <Panel width="100%">
+                {/* Pending display */}
+                <div className="rounded mb-1.5 px-2 py-1 text-center font-mono"
+                  style={{
+                    background: "#0c0c0c", border: "1px solid #2a2a2a",
+                    color: pendingDigits ? "#fbbf24" : armedFn ? "#d4d4d4" : "#3a3a3a",
+                    fontSize: "clamp(9px, 1.1vw, 12px)", minHeight: 22,
+                    fontFamily: "'Courier New', monospace", letterSpacing: "0.08em",
+                    boxShadow: "inset 0 2px 6px rgba(0,0,0,0.8)",
+                  }}>
+                  {pendingDigits || (armedFn ? armedFn.slice(0, 10) : "──────────")}
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <NK label="7" onClick={cb.n7} />
+                  <NK label="8" onClick={cb.n8} />
+                  <NK label="9" onClick={cb.n9} />
+                  <NK label="4" onClick={cb.n4} />
+                  <NK label="5" onClick={cb.n5} />
+                  <NK label="6" onClick={cb.n6} />
+                  <NK label="1" onClick={cb.n1} />
+                  <NK label="2" onClick={cb.n2} />
+                  <NK label="3" onClick={cb.n3} />
+                  <NK label="CLR" onClick={cb.clr} color="red" />
+                  <NK label="0" onClick={cb.n0} />
+                  <NK label="ENT" onClick={cb.ent} color="green" />
+                </div>
+              </Panel>
+            </div>
+
+            <Divider />
+
+            {/* ══ TRANSPORT / CONTROLS ══ */}
+            <div style={{ flex: "0 0 auto", width: CTRL_W }}>
+              <ZoneLabel label="CONTROLS" color="#78716c" />
+              <Panel width="100%">
+                <div className="flex flex-col gap-1.5">
+
+                  {/* Arrow diamond — period adj / shot adj / CLR */}
+                  <div className="grid grid-cols-3 gap-1" style={{ gridTemplateRows: "repeat(3,1fr)" }}>
+                    <div /><AR label="▲" onClick={cb.periodPlus} title="Period +" /><div />
+                    <AR label="◄" onClick={cb.shotAdjMinus} title="Shot −1s" />
+                    <button onPointerDown={cb.clrAll}
+                      className="aspect-square w-full flex items-center justify-center rounded font-black select-none touch-none"
+                      style={{
+                        fontFamily: "Impact, sans-serif", fontSize: "clamp(7px, 0.85vw, 9px)",
+                        background: "#222", borderBottom: "2px solid #111", color: "#888",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+                        WebkitUserSelect: "none", userSelect: "none",
+                      }}>CLR</button>
+                    <AR label="►" onClick={cb.shotAdjPlus} title="Shot +1s" />
+                    <div /><AR label="▼" onClick={cb.periodMinus} title="Period −" /><div />
+                  </div>
+
+                  {/* Shot quick resets */}
+                  <div className="grid grid-cols-2 gap-1">
+                    {[["30s", cb.shot30], ["14s", cb.shot14]].map(([lbl, fn]) => (
+                      <button key={lbl as string} onPointerDown={fn as () => void}
+                        className="rounded font-black uppercase flex items-center justify-center select-none touch-none"
+                        style={{
+                          height: 26, fontFamily: "Impact, sans-serif", fontSize: "clamp(7px, 0.9vw, 10px)",
+                          background: "#333", borderBottom: "2px solid #111", color: "#d4d4d4",
+                          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.07)",
+                          WebkitUserSelect: "none", userSelect: "none",
+                        }}>{lbl}</button>
+                    ))}
+                  </div>
+
+                  {/* Main transport */}
+                  <RB label="◼ HORN" onClick={cb.horn} color="yellow" />
+                  <RB label="▶ START" onClick={cb.start} color="green" />
+                  <RB label="■ STOP" onClick={cb.stop} color="red" />
+                </div>
+              </Panel>
+            </div>
 
           </div>{/* end main button area */}
 
-          {/* ── Bottom keybind bar ── */}
-          <div className="px-5 py-2 flex items-center gap-2 flex-wrap"
-            style={{ background: "linear-gradient(180deg, #b0b0b0, #a0a0a0)", borderTop: "1px solid #888" }}>
-            <span className="font-bold text-zinc-500 uppercase tracking-widest" style={{ fontSize: 8 }}>Keyboard:</span>
+          {/* ── Keybind strip ── */}
+          <div className="px-5 py-1.5 flex items-center gap-2 flex-wrap"
+            style={{ background: "linear-gradient(180deg,#b4b4b4,#a4a4a4)", borderTop: "1px solid #888" }}>
+            <span className="font-bold text-zinc-500 uppercase tracking-widest" style={{ fontSize: 8 }}>Keys:</span>
             {[
               ["Space","start/stop"], ["H/G","home/guest"], ["Q/W/E","+1/+2/+3"],
-              ["R","− score"], ["F/⇧F","foul±"], ["T","TOL"], ["B","bonus"],
+              ["R","−score"], ["F/⇧F","foul±"], ["T","TOL"], ["B","bonus"],
               ["P","poss"], ["⇧P","period"], ["N","horn"], ["0–9","digits"],
               ["Enter","commit"], ["Esc","clear"],
             ].map(([k, v]) => (
               <span key={k} className="flex items-center gap-0.5">
                 <kbd className="rounded px-1 py-0.5 font-mono font-bold text-zinc-700"
-                  style={{ fontSize: 8, background: "#e0e0e0", border: "1px solid #999", boxShadow: "0 1px 0 #888" }}>
-                  {k}
-                </kbd>
+                  style={{ fontSize: 8, background: "#e0e0e0", border: "1px solid #999", boxShadow: "0 1px 0 #888" }}>{k}</kbd>
                 <span className="text-zinc-500" style={{ fontSize: 8 }}>{v}</span>
               </span>
             ))}
@@ -634,9 +707,9 @@ export default function DAS5000Control() {
     );
   }
 
-  // ─────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
   // STANDARD LAYOUT (unchanged)
-  // ─────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
   return (
     <div className="min-h-screen w-full p-4 md:p-8 flex flex-col items-center justify-center"
       style={{ background: "radial-gradient(ellipse at top, #1a1a1a 0%, #050505 80%)" }}>
@@ -738,29 +811,5 @@ export default function DAS5000Control() {
         </div>
       </div>
     </div>
-  );
-}
-
-function pad(s: string, n: number) { return (s || "").slice(0, n).padEnd(n, " "); }
-function pad3(n: number) { return String(n).padStart(3, " "); }
-
-function KeyBtn({ label, hint, onClick, color = "gray", armed = false, className = "" }: {
-  label: string; hint?: string; onClick: () => void; color?: "gray"|"red"|"green"|"blue"|"amber"|"dark"; armed?: boolean; className?: string;
-}) {
-  const colorMap: Record<string, string> = {
-    gray:  "from-zinc-600 to-zinc-800 text-zinc-100 border-zinc-900",
-    dark:  "from-zinc-800 to-zinc-950 text-amber-300 border-black",
-    red:   "from-red-600 to-red-900 text-white border-red-950",
-    green: "from-green-600 to-green-900 text-white border-green-950",
-    blue:  "from-blue-700 to-blue-950 text-white border-blue-950",
-    amber: "from-amber-400 to-amber-700 text-black border-amber-900",
-  };
-  return (
-    <button onClick={onClick}
-      className={`relative bg-gradient-to-b ${colorMap[color]} border-b-4 rounded-md py-2.5 px-1 text-[11px] font-bold uppercase tracking-wider transition-all active:translate-y-0.5 active:border-b-2 hover:brightness-110 ${armed ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-zinc-900" : ""} ${className}`}
-      style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 4px rgba(0,0,0,0.5)" }}>
-      <div>{label}</div>
-      {hint && <div className="text-[8px] opacity-60 mt-0.5">{hint}</div>}
-    </button>
   );
 }
