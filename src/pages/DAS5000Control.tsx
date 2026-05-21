@@ -362,7 +362,7 @@ export default function DAS5000Control() {
           </div>
 
           {/* ── MAIN BUTTON AREA ── */}
-          <div className="flex items-start px-5 py-4 gap-0"
+          <div className="flex items-start justify-center px-5 py-4 gap-0"
             style={{ background: "linear-gradient(160deg, #c8c8c8 0%, #b0b0b0 100%)" }}>
 
             {/* ═══ HOME PANEL (green) ═══ */}
