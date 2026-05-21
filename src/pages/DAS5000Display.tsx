@@ -75,200 +75,172 @@ export default function DAS5000Display() {
     </div>
   );
 
-  // ── BASKETBALL layout matching reference image ──────────────────────────────
+  // ── BASKETBALL layout ─────────────────────────────────────────────────────
   //
-  // Grid proportions (3 cols):
-  //   [HOME]  [CENTER]  [GUEST]
-  //   cols:   3fr  2fr  3fr   — center narrower, sides wider for scores
+  // Proportions (matching reference photo):
+  //   Clock   — tallest element, full-width centered top
+  //   Scores  — hero digits, tall (240px), take up 3fr each side
+  //   Period  — same module height as scores but only 1 digit + arrows; 2fr center
+  //   Fouls   — shorter than scores (~55% of score height), sit in their own row
+  //   PF box  — same height as fouls row; ghost segments always shown, only lit when called
+  //   TOL     — compact, tucked beside MATCH label in center bottom
   //
-  // Row heights are driven by a shared SEG_H constant so everything aligns.
+  // Key rule: NO flex-1 on modules — explicit padding drives height so nothing
+  // "inflates" to fill leftover space.
   //
-  const SEG_SCORE  = 180;   // score digit height
-  const SEG_PERIOD = 180;   // period digit height — matches score row
-  const SEG_FOUL   = 130;   // team fouls digit height
-  const SEG_PF     = 130;   // player foul digit height (## and #)
-  const SEG_CLOCK  = 120;   // clock height
+  const renderBasketball = (withFouls: boolean) => {
+    // Is there an active player-foul call to display?
+    const pfActive = (state.lastFoulPlayer ?? null) !== null && state.lastFoulPlayer !== 0;
 
-  const renderBasketball = (withFouls: boolean) => (
-    <Board>
-      {/* Daktronics branding strip */}
-      <div
-        className="text-center py-1"
-        style={{
-          background: "#000",
-          borderBottom: "2px solid #222",
-          fontFamily: LABEL_FONT,
-          fontWeight: 900,
-          fontSize: 13,
-          letterSpacing: "0.25em",
-          color: "#555",
-        }}
-      >
-        DAKTRONICS
-      </div>
+    return (
+      <Board>
+        {/* Branding strip */}
+        <div style={{
+          background: "#000", borderBottom: "2px solid #222",
+          fontFamily: LABEL_FONT, fontWeight: 900, fontSize: 13,
+          letterSpacing: "0.25em", color: "#555", textAlign: "center", padding: "4px 0",
+        }}>DAKTRONICS</div>
 
-      <div className="p-4 md:p-6 flex flex-col gap-4" style={{ background: "#111" }}>
+        <div style={{ background: "#111", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
 
-        {/* ── ROW 1: Clock — full width, top center ── */}
-        <div className="flex justify-center">
-          <Module style={{ padding: "12px 32px" }}>
-            <SegText text={clockStr} height={SEG_CLOCK} color={AMBER} />
-          </Module>
-        </div>
-
-        {/* ── ROW 2: HOME score | PERIOD+POSS+PLAYER FOUL | GUEST score ──
-            3 columns: scores are equal, center is narrower              */}
-        <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: "3fr 2fr 3fr" }}>
-
-          {/* HOME block */}
-          <div className="flex flex-col items-center gap-2">
-            <Label style={{ fontSize: "clamp(22px, 3.5vw, 44px)" }}>{state.homeName}</Label>
-            <Module className="w-full flex-1 flex items-center justify-center" style={{ padding: "16px 8px" }}>
-              {/* 3 digits — ghost leading segments give visual weight for 100+ scores */}
-              <SevenSegNumber value={state.homeScore} digits={3} height={SEG_SCORE} color={RED} />
+          {/* ── ROW 1: Clock centered ── */}
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Module style={{ padding: "10px 40px" }}>
+              <SegText text={clockStr} height={150} color={AMBER} />
             </Module>
-            <Label style={{ fontSize: "clamp(18px, 2.5vw, 32px)" }}>SCORE</Label>
           </div>
 
-          {/* CENTER block: Period (with poss arrows) stacked above Player Foul */}
-          <div className="flex flex-col items-center gap-2">
-            {/* PERIOD label + module — same height as score module */}
-            <Label style={{ fontSize: "clamp(14px, 1.8vw, 24px)" }}>PERIOD</Label>
-            <Module className="w-full flex-1 flex items-center justify-center" style={{ padding: "16px 8px" }}>
-              <div className="flex items-center justify-center gap-2 w-full">
-                {/* Home possession arrow */}
-                <div style={{
-                  fontSize: "clamp(20px, 2.5vw, 34px)",
-                  fontFamily: LABEL_FONT,
-                  fontWeight: 900,
-                  color: state.possession === "home" ? AMBER : "#1e1e1e",
-                  textShadow: state.possession === "home" ? `0 0 12px ${AMBER}` : "none",
-                  transition: "color 0.15s, text-shadow 0.15s",
-                  lineHeight: 1,
-                  flexShrink: 0,
-                }}>◄</div>
-                <SevenSegNumber value={state.period} digits={1} height={SEG_PERIOD} color={AMBER} />
-                {/* Guest possession arrow */}
-                <div style={{
-                  fontSize: "clamp(20px, 2.5vw, 34px)",
-                  fontFamily: LABEL_FONT,
-                  fontWeight: 900,
-                  color: state.possession === "guest" ? AMBER : "#1e1e1e",
-                  textShadow: state.possession === "guest" ? `0 0 12px ${AMBER}` : "none",
-                  transition: "color 0.15s, text-shadow 0.15s",
-                  lineHeight: 1,
-                  flexShrink: 0,
-                }}>►</div>
-              </div>
-            </Module>
-            {/* Spacer label — blank to align with SCORE label below score */}
-            <Label style={{ fontSize: "clamp(18px, 2.5vw, 32px)", opacity: 0 }}>SCORE</Label>
-          </div>
+          {/* ── ROW 2: Score | Period | Score  (3fr 2fr 3fr) ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr 3fr", gap: 12, alignItems: "start" }}>
 
-          {/* GUEST block */}
-          <div className="flex flex-col items-center gap-2">
-            <Label style={{ fontSize: "clamp(22px, 3.5vw, 44px)" }}>{state.guestName}</Label>
-            <Module className="w-full flex-1 flex items-center justify-center" style={{ padding: "16px 8px" }}>
-              <SevenSegNumber value={state.guestScore} digits={3} height={SEG_SCORE} color={RED} />
-            </Module>
-            <Label style={{ fontSize: "clamp(18px, 2.5vw, 32px)" }}>SCORE</Label>
-          </div>
-        </div>
+            {/* HOME score */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <Label style={{ fontSize: "clamp(20px, 3vw, 40px)" }}>{state.homeName}</Label>
+              <Module style={{ width: "100%", padding: "18px 8px", display: "flex", justifyContent: "center" }}>
+                <SevenSegNumber value={state.homeScore} digits={3} height={240} color={RED} />
+              </Module>
+              <Label style={{ fontSize: "clamp(16px, 2.2vw, 30px)" }}>SCORE</Label>
+            </div>
 
-        {/* ── ROW 3: FOULS (large) | PLAYER FOUL + MATCH | FOULS (large) ── */}
-        <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: "3fr 2fr 3fr" }}>
+            {/* CENTER: PERIOD label + module with poss arrows */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <Label style={{ fontSize: "clamp(13px, 1.6vw, 22px)" }}>PERIOD</Label>
+              <Module style={{ width: "100%", padding: "18px 6px", display: "flex", justifyContent: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center" }}>
+                  {/* Home poss arrow */}
+                  <span style={{
+                    fontSize: "clamp(18px, 2.2vw, 30px)", fontFamily: LABEL_FONT, fontWeight: 900, lineHeight: 1, flexShrink: 0,
+                    color: state.possession === "home" ? AMBER : "#1c1c1c",
+                    textShadow: state.possession === "home" ? `0 0 14px ${AMBER}` : "none",
+                    transition: "color 0.15s, text-shadow 0.15s",
+                  }}>◄</span>
+                  <SevenSegNumber value={state.period} digits={1} height={240} color={AMBER} />
+                  {/* Guest poss arrow */}
+                  <span style={{
+                    fontSize: "clamp(18px, 2.2vw, 30px)", fontFamily: LABEL_FONT, fontWeight: 900, lineHeight: 1, flexShrink: 0,
+                    color: state.possession === "guest" ? AMBER : "#1c1c1c",
+                    textShadow: state.possession === "guest" ? `0 0 14px ${AMBER}` : "none",
+                    transition: "color 0.15s, text-shadow 0.15s",
+                  }}>►</span>
+                </div>
+              </Module>
+              {/* Invisible spacer so this column's bottom label aligns with SCORE */}
+              <Label style={{ fontSize: "clamp(16px, 2.2vw, 30px)", opacity: 0, pointerEvents: "none" }}>SCORE</Label>
+            </div>
 
-          {/* Home fouls — big, full width of the home column */}
-          <div className="flex flex-col items-center gap-2">
-            <Label style={{ fontSize: "clamp(18px, 2.5vw, 32px)" }}>FOULS</Label>
-            <Module className="w-full flex-1 flex items-center justify-center" style={{ padding: "14px 8px" }}>
-              <SevenSegNumber value={state.homeFouls} digits={2} height={SEG_FOUL} color={RED} />
-            </Module>
-            {/* Bonus dots below fouls */}
-            <div className="flex gap-3">
-              <div className="w-5 h-5 rounded-full" style={{
-                background: state.bonus === "home" ? AMBER : "#222",
-                boxShadow: state.bonus === "home" ? `0 0 10px ${AMBER}` : "none",
-              }} />
-              <div className="w-5 h-5 rounded-full" style={{
-                background: state.doubleBonus === "home" ? RED : "#222",
-                boxShadow: state.doubleBonus === "home" ? `0 0 10px ${RED}` : "none",
-              }} />
+            {/* GUEST score */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <Label style={{ fontSize: "clamp(20px, 3vw, 40px)" }}>{state.guestName}</Label>
+              <Module style={{ width: "100%", padding: "18px 8px", display: "flex", justifyContent: "center" }}>
+                <SevenSegNumber value={state.guestScore} digits={3} height={240} color={RED} />
+              </Module>
+              <Label style={{ fontSize: "clamp(16px, 2.2vw, 30px)" }}>SCORE</Label>
             </div>
           </div>
 
-          {/* CENTER: Player foul ## # stacked above MATCH + TOL pair */}
-          <div className="flex flex-col items-center gap-2">
-            <Label style={{ fontSize: "clamp(14px, 1.8vw, 24px)" }}>PLAYER FOUL</Label>
-            {/*
-              ## # layout: two-digit jersey number then one-digit foul count.
-              SevenSegNumber renders ghost (dim) segments for unused leading digits
-              so the bounding box is always the same width regardless of value.
-            */}
-            <Module className="w-full flex-1 flex items-center justify-center" style={{ padding: "14px 8px" }}>
-              <div className="flex items-center justify-center gap-3">
-                <SevenSegNumber
-                  value={state.lastFoulPlayer ?? 0}
-                  digits={2}
-                  height={SEG_PF}
-                  color={AMBER}
-                />
-                <SevenSegNumber
-                  value={state.lastFoulCount ?? 0}
-                  digits={1}
-                  height={SEG_PF}
-                  color={AMBER}
-                />
-              </div>
-            </Module>
+          {/* ── ROW 3: Fouls | Player Foul + MATCH/TOL | Fouls  (3fr 2fr 3fr) ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr 3fr", gap: 12, alignItems: "start" }}>
 
-            {/* TOL pair sits at the bottom of the center column */}
-            <div className="flex gap-4 items-end w-full justify-center">
-              <div className="flex flex-col items-center gap-1">
-                <Label style={{ fontSize: "clamp(11px, 1.4vw, 18px)" }}>TOL</Label>
-                <Module style={{ padding: "6px 12px" }}>
-                  <SevenSegNumber value={state.homeTOL} digits={1} height={48} color={GREEN} />
-                </Module>
+            {/* HOME fouls — fixed padding, NOT flex-1 */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>FOULS</Label>
+              <Module style={{ width: "100%", padding: "10px 8px", display: "flex", justifyContent: "center" }}>
+                <SevenSegNumber value={state.homeFouls} digits={2} height={100} color={RED} />
+              </Module>
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ width: 14, height: 14, borderRadius: "50%", background: state.bonus === "home" ? AMBER : "#222", boxShadow: state.bonus === "home" ? `0 0 8px ${AMBER}` : "none" }} />
+                <div style={{ width: 14, height: 14, borderRadius: "50%", background: state.doubleBonus === "home" ? RED : "#222", boxShadow: state.doubleBonus === "home" ? `0 0 8px ${RED}` : "none" }} />
               </div>
-              <Label style={{ fontSize: "clamp(16px, 2vw, 26px)", alignSelf: "center" }}>MATCH</Label>
-              <div className="flex flex-col items-center gap-1">
-                <Label style={{ fontSize: "clamp(11px, 1.4vw, 18px)" }}>TOL</Label>
-                <Module style={{ padding: "6px 12px" }}>
-                  <SevenSegNumber value={state.guestTOL} digits={1} height={48} color={GREEN} />
-                </Module>
+            </div>
+
+            {/* CENTER: Player Foul display + MATCH label + TOL pair */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <Label style={{ fontSize: "clamp(13px, 1.6vw, 22px)" }}>PLAYER FOUL</Label>
+              {/*
+                Ghost segments: always render the dim "88 8" skeleton.
+                When pfActive, the real values light on top via color.
+                We do this by rendering two SevenSegNumber components with
+                the ghost color when not active, normal AMBER when active.
+              */}
+              <Module style={{ width: "100%", padding: "10px 8px", display: "flex", justifyContent: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <SevenSegNumber
+                    value={pfActive ? (state.lastFoulPlayer ?? 0) : 0}
+                    digits={2}
+                    height={100}
+                    color={pfActive ? AMBER : "#2a2000"}
+                  />
+                  <SevenSegNumber
+                    value={pfActive ? (state.lastFoulCount ?? 0) : 0}
+                    digits={1}
+                    height={100}
+                    color={pfActive ? AMBER : "#2a2000"}
+                  />
+                </div>
+              </Module>
+
+              {/* MATCH label + TOL pair underneath */}
+              <Label style={{ fontSize: "clamp(14px, 1.8vw, 24px)" }}>MATCH</Label>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  <Label style={{ fontSize: "clamp(10px, 1.2vw, 16px)" }}>TOL</Label>
+                  <Module style={{ padding: "5px 10px" }}>
+                    <SevenSegNumber value={state.homeTOL} digits={1} height={44} color={GREEN} />
+                  </Module>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  <Label style={{ fontSize: "clamp(10px, 1.2vw, 16px)" }}>TOL</Label>
+                  <Module style={{ padding: "5px 10px" }}>
+                    <SevenSegNumber value={state.guestTOL} digits={1} height={44} color={GREEN} />
+                  </Module>
+                </div>
+              </div>
+            </div>
+
+            {/* GUEST fouls */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>FOULS</Label>
+              <Module style={{ width: "100%", padding: "10px 8px", display: "flex", justifyContent: "center" }}>
+                <SevenSegNumber value={state.guestFouls} digits={2} height={100} color={RED} />
+              </Module>
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ width: 14, height: 14, borderRadius: "50%", background: state.bonus === "guest" ? AMBER : "#222", boxShadow: state.bonus === "guest" ? `0 0 8px ${AMBER}` : "none" }} />
+                <div style={{ width: 14, height: 14, borderRadius: "50%", background: state.doubleBonus === "guest" ? RED : "#222", boxShadow: state.doubleBonus === "guest" ? `0 0 8px ${RED}` : "none" }} />
               </div>
             </div>
           </div>
 
-          {/* Guest fouls */}
-          <div className="flex flex-col items-center gap-2">
-            <Label style={{ fontSize: "clamp(18px, 2.5vw, 32px)" }}>FOULS</Label>
-            <Module className="w-full flex-1 flex items-center justify-center" style={{ padding: "14px 8px" }}>
-              <SevenSegNumber value={state.guestFouls} digits={2} height={SEG_FOUL} color={RED} />
-            </Module>
-            <div className="flex gap-3">
-              <div className="w-5 h-5 rounded-full" style={{
-                background: state.bonus === "guest" ? AMBER : "#222",
-                boxShadow: state.bonus === "guest" ? `0 0 10px ${AMBER}` : "none",
-              }} />
-              <div className="w-5 h-5 rounded-full" style={{
-                background: state.doubleBonus === "guest" ? RED : "#222",
-                boxShadow: state.doubleBonus === "guest" ? `0 0 10px ${RED}` : "none",
-              }} />
+          {/* ── Optional player foul grid (indoor-bball-fouls) ── */}
+          {withFouls && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, paddingTop: 16, borderTop: "2px solid #27272a" }}>
+              <PlayerFoulCol title={state.homeName} players={state.homePlayers} />
+              <PlayerFoulCol title={state.guestName} players={state.guestPlayers} />
             </div>
-          </div>
+          )}
         </div>
-
-        {/* ── Player foul grid (optional, indoor-bball-fouls layout) ── */}
-        {withFouls && (
-          <div className="grid grid-cols-2 gap-6 pt-4 border-t-2 border-zinc-800">
-            <PlayerFoulCol title={state.homeName} players={state.homePlayers} />
-            <PlayerFoulCol title={state.guestName} players={state.guestPlayers} />
-          </div>
-        )}
-      </div>
-    </Board>
-  );
+      </Board>
+    );
+  };
 
   // ── All other layouts unchanged ─────────────────────────────────────────────
 
