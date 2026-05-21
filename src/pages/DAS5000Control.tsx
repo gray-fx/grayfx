@@ -58,14 +58,13 @@ export default function DAS5000Control() {
     setTimeout(() => setStatus("READY"), 600);
   }, [armedFn, armedSide, pendingDigits, state, update]);
 
-
-  // Instant action — fires immediately, no arm/enter needed
   const act = useCallback((fn: () => void) => {
     fn();
     setArmedFn(null); setArmedSide(null); setPendingDigits("");
     setStatus("OK");
     setTimeout(() => setStatus("READY"), 400);
   }, []);
+
   const press = useCallback((key: string) => {
     if (/^\d$/.test(key)) { setPendingDigits(d => (d + key).slice(0, 4)); return; }
     if (key === "CLR") { setPendingDigits(""); setArmedFn(null); setArmedSide(null); setStatus("CLR"); setTimeout(() => setStatus("READY"), 400); return; }
@@ -136,41 +135,42 @@ export default function DAS5000Control() {
   // ─────────────────────────────────────────────
   if (controllerLayout === "basketball-overlay") {
 
-    // Square membrane button — aspect-square enforced via padding trick
-    // label = top line, sub = smaller second line
     const SQ = ({
       label, sub, color, onClick, armed = false, active = false,
     }: {
       label: string; sub?: string; color: "green" | "red" | "white" | "dark";
       onClick: () => void; armed?: boolean; active?: boolean;
     }) => {
-      const bg: Record<string, { base: string; on: string; border: string }> = {
-        green: { base: "#166534", on: "#22c55e", border: "#052e16" },
-        red:   { base: "#991b1b", on: "#ef4444", border: "#450a0a" },
-        white: { base: "#d4d4d4", on: "#fbbf24", border: "#71717a" },
-        dark:  { base: "#3f3f46", on: "#78716c", border: "#18181b" },
+      const bg: Record<string, { base: string; on: string; border: string; shadow: string }> = {
+        green: { base: "#14532d", on: "#16a34a", border: "#052e16", shadow: "rgba(34,197,94,0.25)" },
+        red:   { base: "#7f1d1d", on: "#dc2626", border: "#450a0a", shadow: "rgba(239,68,68,0.25)" },
+        white: { base: "#c8c8c8", on: "#fbbf24", border: "#888", shadow: "rgba(251,191,36,0.2)" },
+        dark:  { base: "#3a3a3a", on: "#6b6b6b", border: "#111", shadow: "none" },
       };
       const c = bg[color];
       const isOn = armed || active;
       return (
         <button
           onClick={onClick}
-          className="aspect-square w-full flex flex-col items-center justify-center rounded border-b-2 transition-all active:translate-y-px active:border-b-0 hover:brightness-125"
+          className="aspect-square w-full flex flex-col items-center justify-center rounded transition-all active:translate-y-px hover:brightness-125"
           style={{
             background: isOn ? c.on : c.base,
-            borderColor: c.border,
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 1px 2px rgba(0,0,0,0.6)",
+            borderBottom: `3px solid ${c.border}`,
+            boxShadow: isOn
+              ? `inset 0 1px 0 rgba(255,255,255,0.2), 0 0 8px ${c.shadow}`
+              : "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.5)",
             outline: armed ? "2px solid #fbbf24" : "none",
-            outlineOffset: 1,
+            outlineOffset: 2,
           }}
         >
           <span className="font-black uppercase leading-none text-center px-0.5"
             style={{
               fontFamily: "Impact, 'Arial Narrow', sans-serif",
-              fontSize: "clamp(6px, 1.1vw, 9px)",
+              fontSize: "clamp(6px, 1.05vw, 9px)",
               color: color === "white" ? (isOn ? "#000" : "#1a1a1a") : "#fff",
-              letterSpacing: "0.03em",
+              letterSpacing: "0.04em",
               lineHeight: 1.1,
+              textShadow: color !== "white" ? "0 1px 2px rgba(0,0,0,0.6)" : "none",
             }}>
             {label}
           </span>
@@ -178,8 +178,8 @@ export default function DAS5000Control() {
             <span className="font-bold uppercase leading-none text-center px-0.5 mt-0.5"
               style={{
                 fontFamily: "Impact, 'Arial Narrow', sans-serif",
-                fontSize: "clamp(5px, 0.85vw, 7px)",
-                color: color === "white" ? (isOn ? "#000" : "#444") : "rgba(255,255,255,0.75)",
+                fontSize: "clamp(5px, 0.8vw, 7px)",
+                color: color === "white" ? (isOn ? "#000" : "#555") : "rgba(255,255,255,0.7)",
                 letterSpacing: "0.02em",
               }}>
               {sub}
@@ -189,53 +189,104 @@ export default function DAS5000Control() {
       );
     };
 
-    // Numpad button (square)
     const NQ = ({ label, onClick, color = "dark" }: { label: string; onClick: () => void; color?: "dark" | "red" | "green" }) => {
-      const styles: Record<string, string> = {
-        dark:  "bg-zinc-700 border-zinc-900 text-amber-300 hover:bg-zinc-600",
-        red:   "bg-red-700 border-red-900 text-white hover:bg-red-600",
-        green: "bg-green-700 border-green-900 text-white hover:bg-green-600",
+      const styles: Record<string, { bg: string; border: string; text: string }> = {
+        dark:  { bg: "#444", border: "#111", text: "#fbbf24" },
+        red:   { bg: "#991b1b", border: "#450a0a", text: "#fff" },
+        green: { bg: "#15803d", border: "#052e16", text: "#fff" },
       };
+      const s = styles[color];
       return (
         <button onClick={onClick}
-          className={`aspect-square w-full flex items-center justify-center rounded border-b-2 font-black uppercase transition-all active:translate-y-px active:border-b-0 hover:brightness-110 ${styles[color]}`}
+          className="aspect-square w-full flex items-center justify-center rounded font-black uppercase transition-all active:translate-y-px hover:brightness-115"
           style={{
+            background: s.bg,
+            borderBottom: `3px solid ${s.border}`,
+            color: s.text,
             fontFamily: "Impact, sans-serif",
-            fontSize: "clamp(8px, 1.3vw, 11px)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12)",
+            fontSize: "clamp(8px, 1.3vw, 12px)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.4), 0 2px 3px rgba(0,0,0,0.5)",
           }}>
           {label}
         </button>
       );
     };
 
-    // Right-side tall buttons (not square — these are rectangular on the real unit)
-    const RB = ({ label, onClick, color }: { label: string; onClick: () => void; color: "green" | "red" | "yellow" }) => {
-      const s: Record<string, string> = {
-        green:  "bg-green-600 border-green-900 text-white hover:bg-green-500",
-        red:    "bg-red-600 border-red-900 text-white hover:bg-red-500",
-        yellow: "bg-yellow-400 border-yellow-700 text-black hover:bg-yellow-300",
+    // Rectangular tall button for right side controls
+    const RB = ({ label, sub, onClick, color }: { label: string; sub?: string; onClick: () => void; color: "green" | "red" | "yellow" | "gray" }) => {
+      const s: Record<string, { bg: string; border: string; text: string; shadow: string }> = {
+        green:  { bg: "linear-gradient(180deg,#16a34a,#14532d)", border: "#052e16", text: "#fff", shadow: "rgba(22,163,74,0.3)" },
+        red:    { bg: "linear-gradient(180deg,#dc2626,#7f1d1d)", border: "#450a0a", text: "#fff", shadow: "rgba(220,38,38,0.3)" },
+        yellow: { bg: "linear-gradient(180deg,#fde047,#ca8a04)", border: "#713f12", text: "#000", shadow: "rgba(253,224,71,0.3)" },
+        gray:   { bg: "linear-gradient(180deg,#4b4b4b,#2a2a2a)", border: "#111", text: "#d4d4d4", shadow: "none" },
       };
+      const c = s[color];
       return (
         <button onClick={onClick}
-          className={`w-full rounded border-b-4 font-black text-sm uppercase tracking-wider transition-all active:translate-y-0.5 active:border-b-2 ${s[color]}`}
+          className="w-full rounded font-black uppercase tracking-wider transition-all active:translate-y-0.5 hover:brightness-110 flex flex-col items-center justify-center gap-0.5"
           style={{
-            minHeight: 48,
+            minHeight: 44,
+            background: c.bg,
+            borderBottom: `4px solid ${c.border}`,
+            color: c.text,
             fontFamily: "Impact, sans-serif",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 6px rgba(0,0,0,0.4)",
+            fontSize: "clamp(9px, 1.2vw, 13px)",
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 10px ${c.shadow}`,
           }}>
-          {label}
+          <span>{label}</span>
+          {sub && <span style={{ fontSize: "clamp(7px, 0.85vw, 9px)", opacity: 0.75 }}>{sub}</span>}
         </button>
       );
     };
 
-    // Arrow pad square button
     const AR = ({ label, onClick, title }: { label: string; onClick: () => void; title?: string }) => (
       <button onClick={onClick} title={title}
-        className="aspect-square w-full flex items-center justify-center rounded bg-zinc-600 border-b-2 border-zinc-900 text-white font-black hover:bg-zinc-500 active:translate-y-px active:border-b-0"
-        style={{ fontFamily: "Impact, sans-serif", fontSize: "clamp(8px, 1.2vw, 11px)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)" }}>
+        className="aspect-square w-full flex items-center justify-center rounded font-black hover:brightness-115 active:translate-y-px"
+        style={{
+          fontFamily: "Impact, sans-serif",
+          fontSize: "clamp(8px, 1.2vw, 11px)",
+          background: "#3a3a3a",
+          borderBottom: "2px solid #111",
+          color: "#e4e4e4",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
+        }}>
         {label}
       </button>
+    );
+
+    // Panel wrapper with label and accent bar
+    const Panel = ({ label, accent, children, width }: { label: string; accent: string; children: React.ReactNode; width: string }) => (
+      <div style={{ flex: `0 0 auto`, width }}>
+        {/* Zone label */}
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <div style={{ width: 3, height: 14, background: accent, borderRadius: 2, flexShrink: 0 }} />
+          <span className="font-black uppercase tracking-widest"
+            style={{
+              fontFamily: "Impact, 'Arial Narrow', sans-serif",
+              fontSize: "clamp(8px, 0.9vw, 10px)",
+              color: accent,
+              letterSpacing: "0.12em",
+            }}>
+            {label}
+          </span>
+        </div>
+        {/* Inset panel */}
+        <div className="rounded-lg p-2"
+          style={{
+            background: "linear-gradient(160deg, #1c1c1c, #161616)",
+            border: "1px solid rgba(255,255,255,0.06)",
+            boxShadow: "inset 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
+          }}>
+          {children}
+        </div>
+      </div>
+    );
+
+    // Vertical gutter / separator
+    const Sep = () => (
+      <div style={{ flex: "0 0 auto", width: 16, display: "flex", alignItems: "stretch", justifyContent: "center", paddingTop: 24 }}>
+        <div style={{ width: 1, background: "linear-gradient(180deg, transparent, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.08) 80%, transparent)" }} />
+      </div>
     );
 
     return (
@@ -244,192 +295,240 @@ export default function DAS5000Control() {
         {sharedTop}
 
         {/* Console chassis */}
-        <div className="w-full max-w-6xl rounded-xl border-2 border-zinc-500 overflow-hidden"
+        <div className="w-full max-w-6xl rounded-xl overflow-hidden"
           style={{
-            background: "linear-gradient(160deg, #cecece 0%, #a8a8a8 60%, #b8b8b8 100%)",
-            boxShadow: "0 24px 60px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.45)",
+            background: "linear-gradient(160deg, #d6d6d6 0%, #b0b0b0 50%, #c0c0c0 100%)",
+            border: "2px solid #888",
+            boxShadow: "0 30px 80px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -2px 0 rgba(0,0,0,0.2)",
           }}>
 
-          {/* Top: LCD + config */}
-          <div className="flex items-center gap-4 px-5 py-3 border-b-2 border-zinc-500"
-            style={{ background: "linear-gradient(180deg, #ddd 0%, #bbb 100%)" }}>
-            <div className="text-zinc-600 font-black text-xs tracking-widest hidden sm:block" style={{ fontFamily: "Impact, sans-serif" }}>
-              DAKTRONICS
+          {/* ── TOP BEZEL: Brand + LCD + Config ── */}
+          <div className="flex items-center gap-4 px-5 py-3"
+            style={{
+              background: "linear-gradient(180deg, #e0e0e0 0%, #c8c8c8 100%)",
+              borderBottom: "2px solid #999",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+            }}>
+
+            <div className="shrink-0">
+              <div className="font-black tracking-widest text-zinc-600 leading-none" style={{ fontFamily: "Impact, sans-serif", fontSize: 13 }}>DAKTRONICS</div>
+              <div className="text-zinc-500 tracking-widest font-bold" style={{ fontSize: 8 }}>ALL SPORT® 5000</div>
             </div>
+
             {/* LCD */}
-            <div className="rounded px-2.5 py-1.5 border-2 border-zinc-600"
-              style={{ background: "linear-gradient(180deg, #5c7a2e 0%, #6e933a 100%)", boxShadow: "inset 0 2px 8px rgba(0,0,0,0.6)" }}>
-              <div className="font-mono whitespace-pre text-black leading-tight"
-                style={{ fontFamily: "'Courier New', monospace", fontSize: "clamp(10px, 1.4vw, 14px)", letterSpacing: "0.05em" }}>
+            <div className="rounded px-3 py-2 shrink-0"
+              style={{
+                background: "linear-gradient(180deg, #4a6b28 0%, #5a7e32 100%)",
+                border: "2px solid #333",
+                boxShadow: "inset 0 3px 10px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.3)",
+              }}>
+              <div className="font-mono whitespace-pre leading-snug"
+                style={{
+                  fontFamily: "'Courier New', monospace",
+                  fontSize: "clamp(10px, 1.3vw, 14px)",
+                  letterSpacing: "0.08em",
+                  color: "#1a1a1a",
+                  textShadow: "0 0 4px rgba(0,0,0,0.3)",
+                }}>
                 {lcdL1.padEnd(20, " ")}{"\n"}{lcdL2.padEnd(20, " ")}
               </div>
             </div>
-            {/* Config */}
-            <div className="flex gap-2 flex-1 justify-center flex-wrap">
+
+            {/* Config selects */}
+            <div className="flex gap-3 flex-1 justify-center flex-wrap">
               {([
                 ["Sport", <select key="sport" value={state.sport} onChange={e => update({ sport: e.target.value as DSport })}
-                  className="bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 text-amber-300 text-xs">
+                  className="bg-zinc-900 border border-zinc-700 rounded px-1.5 py-1 text-amber-300 text-xs font-mono">
                   {["basketball","football","hockey","soccer","baseball"].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
                 </select>],
                 ["Layout", <select key="layout" value={state.layout} onChange={e => update({ layout: e.target.value as any })}
-                  className="bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 text-amber-300 text-xs">
+                  className="bg-zinc-900 border border-zinc-700 rounded px-1.5 py-1 text-amber-300 text-xs font-mono">
                   {[["indoor-bball","Indoor Bball"],["indoor-bball-fouls","Bball+Fouls"],["outdoor-football","Football"],["hockey","Hockey"],["soccer","Soccer"],["baseball","Baseball"],["minimal","Minimal"]].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
                 </select>],
-                ["Home", <input key="home" value={state.homeName} maxLength={8} onChange={e => update({ homeName: e.target.value.toUpperCase() })} className="w-14 bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 text-amber-300 text-xs" />],
-                ["Guest", <input key="guest" value={state.guestName} maxLength={8} onChange={e => update({ guestName: e.target.value.toUpperCase() })} className="w-14 bg-zinc-800 border border-zinc-600 rounded px-1 py-0.5 text-amber-300 text-xs" />],
+                ["Home", <input key="home" value={state.homeName} maxLength={8} onChange={e => update({ homeName: e.target.value.toUpperCase() })} className="w-16 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-1 text-amber-300 text-xs font-mono" />],
+                ["Guest", <input key="guest" value={state.guestName} maxLength={8} onChange={e => update({ guestName: e.target.value.toUpperCase() })} className="w-16 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-1 text-amber-300 text-xs font-mono" />],
               ] as [string, React.ReactNode][]).map(([label, el]) => (
                 <div key={label} className="flex flex-col gap-0.5">
-                  <span className="text-[9px] text-zinc-600 uppercase font-bold tracking-wider">{label}</span>
+                  <span className="font-bold uppercase tracking-wider text-zinc-500" style={{ fontSize: 9 }}>{label}</span>
                   {el}
                 </div>
               ))}
             </div>
-            {/* Logo */}
-            <div className="text-right hidden lg:block shrink-0">
-              <div className="font-black text-zinc-700 text-base tracking-widest leading-none" style={{ fontFamily: "Impact, sans-serif" }}>ALL SPORT</div>
-              <div className="text-zinc-600 text-[10px] font-bold tracking-widest">5000 SERIES</div>
-              <div className="text-zinc-500 text-[8px] tracking-widest uppercase">Control Console</div>
+
+            <div className="text-right shrink-0 hidden lg:block">
+              <div className="font-black text-zinc-600 tracking-widest leading-none" style={{ fontFamily: "Impact, sans-serif", fontSize: 15 }}>ALL SPORT</div>
+              <div className="font-bold text-zinc-500 tracking-widest" style={{ fontSize: 9 }}>5000 SERIES · CONTROL CONSOLE</div>
             </div>
           </div>
 
-          {/* ══════════════════════════════════════════════════════════
-              MAIN BUTTON AREA
-              Layout: [HOME 2col] [SHARED 2col] [GUEST 2col] [NUMPAD 3col] [CONTROLS]
-              ══════════════════════════════════════════════════════════ */}
-          <div className="flex gap-2 px-4 pb-4 pt-3 items-start justify-center flex-wrap">
+          {/* ── MAIN BUTTON AREA ── */}
+          <div className="flex items-start px-5 py-4 gap-0"
+            style={{ background: "linear-gradient(160deg, #c8c8c8 0%, #b0b0b0 100%)" }}>
 
-            {/* ── HOME (green) — 2 columns × 5 rows ── */}
-            <div style={{ flex: "0 0 auto", width: "clamp(88px, 13vw, 130px)" }}>
-              {/* HOME header */}
-              <div className="text-center text-[9px] font-black uppercase tracking-widest py-0.5 rounded mb-1"
-                style={{ color: "#fff", background: "#15803d", fontFamily: "Impact, sans-serif" }}>
-                ◄ HOME
-              </div>
-              {/* 2-col grid, 5 rows */}
+            {/* ═══ HOME PANEL (green) ═══ */}
+            <Panel label="◄ HOME" accent="#22c55e" width="clamp(96px, 14vw, 138px)">
               <div className="grid grid-cols-2 gap-1">
-                {/* Row 1 */}
+                {/* Score column */}
                 <SQ label="SCORE" sub="+1" color="green"
-                  onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 1 })))}
-                  armed={armedFn === "SCORE+1" && armedSide === "home"} />
-                <SQ label="TIME" sub="SHOT TIME" color="green"
-                  onClick={() => { setArmedSide("home"); press("SET SHOT"); }}
-                  armed={armedFn === "SET SHOT" && armedSide === "home"} />
-                {/* Row 2 */}
+                  onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 1 })))} />
                 <SQ label="SCORE" sub="+2" color="green"
                   onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 2 })))} />
-                <SQ label="TEAM FOULS" sub="FOUL +" color="green"
-                  onClick={() => act(() => update(p => ({ homeFouls: p.homeFouls + 1 })))}
-                  armed={armedFn === "FOUL+" && armedSide === "home"} />
-                {/* Row 3 */}
                 <SQ label="SCORE" sub="+3" color="green"
                   onClick={() => act(() => update(p => ({ homeScore: p.homeScore + 3 })))} />
-                <SQ label="TEAM FOULS" sub="FOUL -" color="green"
-                  onClick={() => act(() => update(p => ({ homeFouls: Math.max(0, p.homeFouls - 1) })))}
-                  armed={armedFn === "FOUL-" && armedSide === "home"} />
-                {/* Row 4 */}
-                <SQ label="SCORE" sub="-" color="green"
-                  onClick={() => act(() => update(p => ({ homeScore: Math.max(0, p.homeScore - 1) })))}
-                  armed={armedFn === "SCORE-" && armedSide === "home"} />
+                <SQ label="SCORE" sub="−" color="green"
+                  onClick={() => act(() => update(p => ({ homeScore: Math.max(0, p.homeScore - 1) })))} />
+                {/* Fouls column */}
+                <SQ label="FOULS" sub="+" color="green"
+                  onClick={() => act(() => update(p => ({ homeFouls: p.homeFouls + 1 })))} />
+                <SQ label="FOULS" sub="−" color="green"
+                  onClick={() => act(() => update(p => ({ homeFouls: Math.max(0, p.homeFouls - 1) })))} />
+                {/* Possession / Bonus */}
                 <SQ label="POSS ►" color="green"
                   onClick={() => update({ possession: "home" })}
                   active={state.possession === "home"} />
-                {/* Row 5 — player foul # entry */}
-                <SQ label="PLAYER FOUL #" sub="HOME" color="green"
-                  onClick={() => act(() => update(p => ({ homeFouls: p.homeFouls + 1 })))}
-                  armed={armedFn === "FOUL+" && armedSide === "home"} />
                 <SQ label="BONUS" color="green"
                   onClick={() => act(() => update(p => ({ bonus: p.bonus === "home" ? "none" : "home" })))}
                   active={state.bonus === "home"} />
+                {/* TOL / Player fouls */}
+                <SQ label="TIME OUT" sub="TOL −" color="green"
+                  onClick={() => act(() => update(p => ({ homeTOL: Math.max(0, p.homeTOL - 1) })))} />
+                <SQ label="SHOT CLK" sub="SET" color="green"
+                  onClick={() => { setArmedSide("home"); press("SET SHOT"); }}
+                  armed={armedFn === "SET SHOT" && armedSide === "home"} />
               </div>
-            </div>
+            </Panel>
 
-            {/* ── SHARED (white) — 2 columns × 5 rows ── */}
-            <div style={{ flex: "0 0 auto", width: "clamp(88px, 13vw, 130px)" }}>
-              <div className="text-center text-[9px] font-black uppercase tracking-widest py-0.5 rounded mb-1 text-zinc-500"
-                style={{ fontFamily: "Impact, sans-serif", background: "rgba(0,0,0,0.1)" }}>
-                SHARED
+            <Sep />
+
+            {/* ═══ SHARED / NEUTRAL PANEL ═══ */}
+            <Panel label="SHARED" accent="#a1a1aa" width="clamp(96px, 14vw, 138px)">
+              {/* HOME / GUEST selectors at the top — key for arming side on shared functions */}
+              <div className="grid grid-cols-2 gap-1 mb-2">
+                <button
+                  onClick={() => press("HOME")}
+                  className="rounded font-black uppercase tracking-wider transition-all active:translate-y-px hover:brightness-110 flex items-center justify-center"
+                  style={{
+                    height: 28,
+                    fontFamily: "Impact, 'Arial Narrow', sans-serif",
+                    fontSize: "clamp(7px, 0.95vw, 10px)",
+                    background: armedSide === "home" ? "#22c55e" : "#15532d",
+                    borderBottom: "3px solid #052e16",
+                    color: "#fff",
+                    boxShadow: armedSide === "home" ? "0 0 8px rgba(34,197,94,0.5)" : "inset 0 1px 0 rgba(255,255,255,0.1)",
+                    outline: armedSide === "home" ? "2px solid #fbbf24" : "none",
+                    outlineOffset: 2,
+                  }}>
+                  ◄ HOME
+                </button>
+                <button
+                  onClick={() => press("GUEST")}
+                  className="rounded font-black uppercase tracking-wider transition-all active:translate-y-px hover:brightness-110 flex items-center justify-center"
+                  style={{
+                    height: 28,
+                    fontFamily: "Impact, 'Arial Narrow', sans-serif",
+                    fontSize: "clamp(7px, 0.95vw, 10px)",
+                    background: armedSide === "guest" ? "#dc2626" : "#7f1d1d",
+                    borderBottom: "3px solid #450a0a",
+                    color: "#fff",
+                    boxShadow: armedSide === "guest" ? "0 0 8px rgba(220,38,38,0.5)" : "inset 0 1px 0 rgba(255,255,255,0.1)",
+                    outline: armedSide === "guest" ? "2px solid #fbbf24" : "none",
+                    outlineOffset: 2,
+                  }}>
+                  GUEST ►
+                </button>
               </div>
+
               <div className="grid grid-cols-2 gap-1">
-                {/* Row 1 */}
-                <SQ label="RECALL" sub="BLANK TIME" color="white"
+                {/* SET SCORE — needs side selected first */}
+                <SQ label="SET SCORE" color="white"
+                  onClick={() => setArmedFn("SET SCORE")}
+                  armed={armedFn === "SET SCORE"} />
+                {/* SET CLOCK — no side needed */}
+                <SQ label="SET CLOCK" color="white"
                   onClick={() => press("SET CLOCK")}
                   armed={armedFn === "SET CLOCK"} />
-                <SQ label="SET SCORE" sub="SET ONLY" color="white"
-                  onClick={() => { setArmedSide(null); setArmedFn("SET SCORE"); }}
-                  armed={armedFn === "SET SCORE" && !armedSide} />
-                {/* Row 2 */}
-                <SQ label="▲ PERIOD" color="white"
-                  onClick={() => { update({ period: state.period + 1 }); }} />
-                <SQ label="OUT OF GAME" color="white" onClick={() => {}} />
-                {/* Row 3 */}
-                <SQ label="SHOT START" color="white"
-                  onClick={() => press("SHOT START")} />
-                <SQ label="SHOT STOP" color="white"
-                  onClick={() => press("SHOT STOP")} />
-                {/* Row 4 */}
-                <SQ label="SHOT 30" color="white" onClick={() => press("SHOT 30")} />
-                <SQ label="SHOT 14" color="white" onClick={() => press("SHOT 14")} />
-                {/* Row 5 */}
+                {/* Period */}
+                <SQ label="PERIOD" sub="+" color="white"
+                  onClick={() => update({ period: state.period + 1 })} />
                 <SQ label="SET PERIOD" color="white"
-                  onClick={() => press("PERIOD")} armed={armedFn === "PERIOD"} />
-                <SQ label="SET SHOT" color="white"
-                  onClick={() => press("SET SHOT")} armed={armedFn === "SET SHOT"} />
+                  onClick={() => press("PERIOD")}
+                  armed={armedFn === "PERIOD"} />
+                {/* Shot clock controls */}
+                <SQ label="SHOT" sub="START" color="white"
+                  onClick={() => press("SHOT START")} />
+                <SQ label="SHOT" sub="STOP" color="white"
+                  onClick={() => press("SHOT STOP")} />
+                <SQ label="SHOT 30" color="white"
+                  onClick={() => press("SHOT 30")} />
+                <SQ label="SHOT 14" color="white"
+                  onClick={() => press("SHOT 14")} />
+                {/* SET SHOT — needs side */}
+                <SQ label="SET SHOT" sub="CLK" color="white"
+                  onClick={() => setArmedFn("SET SHOT")}
+                  armed={armedFn === "SET SHOT" && !armedSide} />
+                {/* DBL Bonus — needs side */}
+                <SQ label="DBL BONUS" color="white"
+                  onClick={() => setArmedFn("DBONUS")}
+                  armed={armedFn === "DBONUS"} />
               </div>
-            </div>
 
-            {/* ── GUEST (red) — 2 columns × 5 rows — mirror of HOME ── */}
-            <div style={{ flex: "0 0 auto", width: "clamp(88px, 13vw, 130px)" }}>
-              <div className="text-center text-[9px] font-black uppercase tracking-widest py-0.5 rounded mb-1"
-                style={{ color: "#fff", background: "#b91c1c", fontFamily: "Impact, sans-serif" }}>
-                GUEST ►
-              </div>
+              {/* Hint: select team first for these functions */}
+              {armedFn && !armedSide && ["SET SCORE","DBONUS","SET SHOT"].includes(armedFn) && (
+                <div className="mt-1.5 text-center rounded px-1 py-1"
+                  style={{ background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.35)", fontSize: 8, color: "#fbbf24", fontFamily: "Impact, sans-serif", letterSpacing: "0.06em" }}>
+                  ▲ SELECT HOME or GUEST ▲
+                </div>
+              )}
+            </Panel>
+
+            <Sep />
+
+            {/* ═══ GUEST PANEL (red) — mirror of HOME ═══ */}
+            <Panel label="GUEST ►" accent="#ef4444" width="clamp(96px, 14vw, 138px)">
               <div className="grid grid-cols-2 gap-1">
-                {/* Row 1 */}
-                <SQ label="TIME" sub="SHOT TIME" color="red"
-                  onClick={() => { setArmedSide("guest"); press("SET SHOT"); }}
-                  armed={armedFn === "SET SHOT" && armedSide === "guest"} />
                 <SQ label="SCORE" sub="+1" color="red"
-                  onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 1 })))}
-                  armed={armedFn === "SCORE+1" && armedSide === "guest"} />
-                {/* Row 2 */}
-                <SQ label="TEAM FOULS" sub="FOUL +" color="red"
-                  onClick={() => act(() => update(p => ({ guestFouls: p.guestFouls + 1 })))}
-                  armed={armedFn === "FOUL+" && armedSide === "guest"} />
+                  onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 1 })))} />
                 <SQ label="SCORE" sub="+2" color="red"
                   onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 2 })))} />
-                {/* Row 3 */}
-                <SQ label="TEAM FOULS" sub="FOUL -" color="red"
-                  onClick={() => act(() => update(p => ({ guestFouls: Math.max(0, p.guestFouls - 1) })))}
-                  armed={armedFn === "FOUL-" && armedSide === "guest"} />
                 <SQ label="SCORE" sub="+3" color="red"
                   onClick={() => act(() => update(p => ({ guestScore: p.guestScore + 3 })))} />
-                {/* Row 4 */}
+                <SQ label="SCORE" sub="−" color="red"
+                  onClick={() => act(() => update(p => ({ guestScore: Math.max(0, p.guestScore - 1) })))} />
+                <SQ label="FOULS" sub="+" color="red"
+                  onClick={() => act(() => update(p => ({ guestFouls: p.guestFouls + 1 })))} />
+                <SQ label="FOULS" sub="−" color="red"
+                  onClick={() => act(() => update(p => ({ guestFouls: Math.max(0, p.guestFouls - 1) })))} />
                 <SQ label="◄ POSS" color="red"
                   onClick={() => update({ possession: "guest" })}
                   active={state.possession === "guest"} />
-                <SQ label="SCORE" sub="-" color="red"
-                  onClick={() => act(() => update(p => ({ guestScore: Math.max(0, p.guestScore - 1) })))}
-                  armed={armedFn === "SCORE-" && armedSide === "guest"} />
-                {/* Row 5 — player foul # entry */}
                 <SQ label="BONUS" color="red"
                   onClick={() => act(() => update(p => ({ bonus: p.bonus === "guest" ? "none" : "guest" })))}
                   active={state.bonus === "guest"} />
-                <SQ label="PLAYER FOUL #" sub="GUEST" color="red"
-                  onClick={() => act(() => update(p => ({ guestFouls: p.guestFouls + 1 })))}
-                  armed={armedFn === "FOUL+" && armedSide === "guest"} />
+                <SQ label="TIME OUT" sub="TOL −" color="red"
+                  onClick={() => act(() => update(p => ({ guestTOL: Math.max(0, p.guestTOL - 1) })))} />
+                <SQ label="SHOT CLK" sub="SET" color="red"
+                  onClick={() => { setArmedSide("guest"); press("SET SHOT"); }}
+                  armed={armedFn === "SET SHOT" && armedSide === "guest"} />
               </div>
-            </div>
+            </Panel>
 
-            {/* ── NUMPAD — 3 columns × 4 rows (square keys) ── */}
-            <div style={{ flex: "0 0 auto", width: "clamp(88px, 13vw, 130px)" }}>
-              <div className="text-center text-[9px] font-black uppercase tracking-widest py-0.5 rounded mb-1 text-zinc-500"
-                style={{ fontFamily: "Impact, sans-serif", background: "rgba(0,0,0,0.15)" }}>
-                NUMPAD
-              </div>
+            <Sep />
+
+            {/* ═══ NUMPAD ═══ */}
+            <Panel label="NUMPAD" accent="#78716c" width="clamp(96px, 13vw, 128px)">
               {/* Pending display */}
-              <div className="rounded px-2 py-1 text-center font-mono border border-zinc-700 mb-1"
-                style={{ background: "#111", color: pendingDigits ? "#fbbf24" : "#3f3f46", fontSize: "clamp(9px, 1.3vw, 12px)", minHeight: 22 }}>
-                {pendingDigits || (armedFn ? armedFn.slice(0, 8) : "──")}
+              <div className="rounded mb-1.5 px-2 py-1 text-center font-mono"
+                style={{
+                  background: "#0d0d0d",
+                  border: "1px solid #333",
+                  color: pendingDigits ? "#fbbf24" : armedFn ? "#d4d4d4" : "#444",
+                  fontSize: "clamp(9px, 1.2vw, 13px)",
+                  minHeight: 24,
+                  fontFamily: "'Courier New', monospace",
+                  letterSpacing: "0.08em",
+                  boxShadow: "inset 0 2px 6px rgba(0,0,0,0.8)",
+                }}>
+                {pendingDigits || (armedFn ? armedFn.slice(0, 9) : "──────")}
               </div>
               <div className="grid grid-cols-3 gap-1">
                 {["7","8","9","4","5","6","1","2","3"].map(n =>
@@ -438,66 +537,96 @@ export default function DAS5000Control() {
                 <NQ label="0" onClick={() => press("0")} />
                 <NQ label="ENT" onClick={() => press("ENTER")} color="green" />
               </div>
-            </div>
+            </Panel>
 
-            {/* ── RIGHT CONTROLS: arrow pad + HORN/START/STOP ── */}
-            <div className="flex flex-col gap-1.5" style={{ flex: "0 0 auto", width: "clamp(72px, 10vw, 100px)" }}>
-              <div className="text-center text-[9px] font-black uppercase tracking-widest py-0.5 rounded mb-1 text-zinc-500"
-                style={{ fontFamily: "Impact, sans-serif", background: "rgba(0,0,0,0.15)" }}>
-                CONTROLS
+            <Sep />
+
+            {/* ═══ CONTROLS COLUMN ═══ */}
+            <Panel label="CONTROLS" accent="#78716c" width="clamp(80px, 11vw, 108px)">
+              <div className="flex flex-col gap-1.5">
+
+                {/* Arrow diamond — period and shot adj */}
+                <div className="grid grid-cols-3 gap-1" style={{ gridTemplateRows: "repeat(3, 1fr)" }}>
+                  <div />
+                  <AR label="▲" onClick={() => update({ period: state.period + 1 })} title="Period +" />
+                  <div />
+                  <AR label="◄" onClick={() => update({ shotClockMs: Math.max(0, state.shotClockMs - 1000) })} title="Shot −1s" />
+                  <button
+                    onClick={() => { setArmedFn(null); setArmedSide(null); setPendingDigits(""); setStatus("READY"); }}
+                    className="aspect-square w-full flex items-center justify-center rounded font-black hover:brightness-110 active:translate-y-px"
+                    style={{
+                      fontFamily: "Impact, sans-serif",
+                      fontSize: "clamp(7px, 0.9vw, 9px)",
+                      background: "#2a2a2a",
+                      borderBottom: "2px solid #111",
+                      color: "#a1a1aa",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+                    }}>
+                    CLR
+                  </button>
+                  <AR label="►" onClick={() => update({ shotClockMs: state.shotClockMs + 1000 })} title="Shot +1s" />
+                  <div />
+                  <AR label="▼" onClick={() => update({ period: Math.max(1, state.period - 1) })} title="Period −" />
+                  <div />
+                </div>
+
+                {/* Shot quick resets */}
+                <div className="grid grid-cols-2 gap-1">
+                  <button onClick={() => press("SHOT 30")}
+                    className="rounded font-black uppercase hover:brightness-110 active:translate-y-px flex items-center justify-center"
+                    style={{
+                      height: 28,
+                      fontFamily: "Impact, sans-serif",
+                      fontSize: "clamp(7px, 0.9vw, 10px)",
+                      background: "#3a3a3a",
+                      borderBottom: "2px solid #111",
+                      color: "#d4d4d4",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+                    }}>
+                    30s
+                  </button>
+                  <button onClick={() => press("SHOT 14")}
+                    className="rounded font-black uppercase hover:brightness-110 active:translate-y-px flex items-center justify-center"
+                    style={{
+                      height: 28,
+                      fontFamily: "Impact, sans-serif",
+                      fontSize: "clamp(7px, 0.9vw, 10px)",
+                      background: "#3a3a3a",
+                      borderBottom: "2px solid #111",
+                      color: "#d4d4d4",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+                    }}>
+                    14s
+                  </button>
+                </div>
+
+                {/* Main action buttons */}
+                <RB label="◼ HORN" onClick={() => press("HORN")} color="yellow" />
+                <RB label="▶ START" sub="SPACE" onClick={() => press("START")} color="green" />
+                <RB label="■ STOP" sub="SPACE" onClick={() => press("STOP")} color="red" />
               </div>
-
-              {/* Arrow diamond — ONE only, right side */}
-              <div className="grid grid-cols-3 gap-1" style={{ gridTemplateRows: "repeat(3, 1fr)" }}>
-                <div />
-                <AR label="▲" onClick={() => update({ period: state.period + 1 })} title="Period +" />
-                <div />
-                <AR label="◄" onClick={() => update({ shotClockMs: Math.max(0, state.shotClockMs - 1000) })} title="Shot -1s" />
-                <button
-                  onClick={() => { setArmedFn(null); setArmedSide(null); setPendingDigits(""); setStatus("READY"); }}
-                  className="aspect-square w-full flex items-center justify-center rounded bg-zinc-800 border-b-2 border-zinc-900 text-zinc-300 font-black hover:bg-zinc-700 active:translate-y-px active:border-b-0"
-                  style={{ fontFamily: "Impact, sans-serif", fontSize: "clamp(7px, 1vw, 9px)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)" }}>
-                  OK
-                </button>
-                <AR label="►" onClick={() => update({ shotClockMs: state.shotClockMs + 1000 })} title="Shot +1s" />
-                <div />
-                <AR label="▼" onClick={() => update({ period: Math.max(1, state.period - 1) })} title="Period -" />
-                <div />
-              </div>
-
-              {/* Blank/Display button */}
-              <button className="w-full rounded border-b-2 border-zinc-800 bg-zinc-600 text-white font-black uppercase hover:bg-zinc-500 active:translate-y-px active:border-b-0"
-                style={{ minHeight: 28, fontFamily: "Impact, sans-serif", fontSize: "clamp(7px, 1vw, 10px)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)" }}>
-                DISPLAY
-              </button>
-
-              {/* Shot clock quick resets */}
-              <div className="grid grid-cols-2 gap-1">
-                <button onClick={() => press("SHOT 30")}
-                  className="aspect-square w-full flex items-center justify-center rounded border-b-2 bg-zinc-700 border-zinc-900 text-zinc-200 font-black uppercase hover:bg-zinc-600 active:translate-y-px active:border-b-0"
-                  style={{ fontFamily: "Impact, sans-serif", fontSize: "clamp(7px, 1vw, 9px)" }}>
-                  30s
-                </button>
-                <button onClick={() => press("SHOT 14")}
-                  className="aspect-square w-full flex items-center justify-center rounded border-b-2 bg-zinc-700 border-zinc-900 text-zinc-200 font-black uppercase hover:bg-zinc-600 active:translate-y-px active:border-b-0"
-                  style={{ fontFamily: "Impact, sans-serif", fontSize: "clamp(7px, 1vw, 9px)" }}>
-                  14s
-                </button>
-              </div>
-
-              {/* HORN yellow */}
-              <RB label="◼ HORN" onClick={() => press("HORN")} color="yellow" />
-              {/* START green */}
-              <RB label="▶ START" onClick={() => press("START")} color="green" />
-              {/* STOP red */}
-              <RB label="■ STOP" onClick={() => press("STOP")} color="red" />
-            </div>
+            </Panel>
 
           </div>{/* end main button area */}
 
-          {/* Keybind hint bar */}
-          <div className="px-4 pb-2 pt-2 text-[9px] text-zinc-500 border-t border-zinc-500/30">
-            <kbd>Space</kbd> start/stop · <kbd>H</kbd>/<kbd>G</kbd> team · <kbd>Q/W/E</kbd> +1/+2/+3 · <kbd>R</kbd> − score · <kbd>F</kbd>/<kbd>⇧F</kbd> foul+/− · <kbd>T</kbd> TOL · <kbd>B</kbd> bonus · <kbd>P</kbd> poss · <kbd>⇧P</kbd> period · <kbd>N</kbd> horn · <kbd>0–9</kbd> digits · <kbd>Enter</kbd> commit · <kbd>Esc</kbd> clear
+          {/* ── Bottom keybind bar ── */}
+          <div className="px-5 py-2 flex items-center gap-2 flex-wrap"
+            style={{ background: "linear-gradient(180deg, #b0b0b0, #a0a0a0)", borderTop: "1px solid #888" }}>
+            <span className="font-bold text-zinc-500 uppercase tracking-widest" style={{ fontSize: 8 }}>Keyboard:</span>
+            {[
+              ["Space","start/stop"], ["H/G","home/guest"], ["Q/W/E","+1/+2/+3"],
+              ["R","− score"], ["F/⇧F","foul±"], ["T","TOL"], ["B","bonus"],
+              ["P","poss"], ["⇧P","period"], ["N","horn"], ["0–9","digits"],
+              ["Enter","commit"], ["Esc","clear"],
+            ].map(([k, v]) => (
+              <span key={k} className="flex items-center gap-0.5">
+                <kbd className="rounded px-1 py-0.5 font-mono font-bold text-zinc-700"
+                  style={{ fontSize: 8, background: "#e0e0e0", border: "1px solid #999", boxShadow: "0 1px 0 #888" }}>
+                  {k}
+                </kbd>
+                <span className="text-zinc-500" style={{ fontSize: 8 }}>{v}</span>
+              </span>
+            ))}
           </div>
 
         </div>{/* end chassis */}
