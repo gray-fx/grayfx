@@ -1,1105 +1,399 @@
-import { useDAS5000, formatClock } from "@/hooks/use-das5000";
-import { SevenSegNumber, SegText } from "@/components/das5000/SevenSeg";
-import { useEffect, useState } from "react";
+import { useScoreboard, SPORT_CONFIG, formatClock } from "@/hooks/use-scoreboard";
+import { motion, AnimatePresence } from "framer-motion";
+import { Flag, AlertTriangle, Hand } from "lucide-react";
 
-// Inject Barlow Condensed Black from Google Fonts once
-if (typeof document !== "undefined") {
-  const id = "barlow-condensed-font";
-  if (!document.getElementById(id)) {
-    const link = document.createElement("link");
-    link.id = id;
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&display=swap";
-    document.head.appendChild(link);
-  }
-}
+const ScoreboardDisplay = () => {
+  const { state } = useScoreboard(false);
+  const config = SPORT_CONFIG[state.sport];
+  const d = state.display;
+  const clockText = formatClock(state.clockMs, d);
 
-const LABEL_FONT = "'Barlow Condensed', 'Arial Narrow', sans-serif";
+  const ordinal = (n: number) => {
+    if (n === 1) return "1st";
+    if (n === 2) return "2nd";
+    if (n === 3) return "3rd";
+    return `${n}th`;
+  };
 
-export default function DAS5000Display() {
-  const { state } = useDAS5000(false);
-  const clockStr = formatClock(state.clockMs, state.showTenthsUnder60);
-  const [hornFlash, setHornFlash] = useState(false);
-
-  useEffect(() => {
-    if (!state.hornAt) return;
-    setHornFlash(true);
-    const t = setTimeout(() => setHornFlash(false), 1500);
-    return () => clearTimeout(t);
-  }, [state.hornAt]);
-
-  const RED   = "#ff2a2a";
-  const AMBER = "#ffb800";
-  const GREEN = "#1cff5a";
-
-  // Ghost (always-dim) color for unlit segments — simulates real LED matrix
-  const GHOST_AMBER = "#2a2000";
-  const GHOST_RED   = "#2a0000";
-
-  const Label = ({ children, className = "", style = {} }: any) => (
-    <div
-      className={`tracking-wider text-center uppercase ${className}`}
-      style={{
-        fontFamily: LABEL_FONT,
-        fontWeight: 900,
-        color: "#ffffff",
-        textShadow: "0 0 6px rgba(255,255,255,0.2)",
-        letterSpacing: "0.06em",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
+  const PossessionDot = ({ side }: { side: "home" | "away" }) => (
+    <motion.div
+      initial={{ scale: 0 }}
+      animate={{ scale: d.showPossession && state.possession === side ? 1 : 0 }}
+      className="w-3 h-3 rounded-full bg-primary"
+    />
   );
 
-  // Outer scoreboard bezel
-  const Board = ({ children }: any) => (
-    <div
-      className="w-full max-w-[1400px] rounded-xl overflow-hidden"
-      style={{
-        background: "#111",
-        border: "6px solid #222",
-        boxShadow: "0 0 0 2px #444, 0 20px 60px rgba(0,0,0,0.9)",
-      }}
-    >
-      {children}
-    </div>
-  );
+  // Ghost digit string for LED effect — fills display width with "8"s
+  const ghostScore = "888";
+  const ghostFoul = "88";
+  const ghostClock = state.sport === "baseball" ? "" : "88:88";
+  const ghostPeriod = "8";
+  const ghostPlayerFoul = "88 8";
 
-  // Individual digit panel — dark inset box
-  const Module = ({ children, className = "", style = {} }: any) => (
-    <div
-      className={`rounded-lg flex items-center justify-center ${className}`}
-      style={{
-        background: "#0a0a0a",
-        border: "3px solid #1a1a1a",
-        boxShadow: "inset 0 0 30px rgba(0,0,0,0.95)",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-5xl space-y-3">
 
-  // ── BASKETBALL layout ──────────────────────────────────────────────────────
-  //
-  // Proportions matching reference photo:
-  //   Clock     — very large, top-center, prominent
-  //   Scores    — hero digits (240px), wide columns (3fr each)
-  //   Period    — narrower column (1.4fr), digit ~150px, SMALLER than scores
-  //   Fouls     — taller (130px), sit below scores in same columns
-  //   PF box    — always shows "## #" ghost segments; lights up when pfActive
-  //   Bonus "B" — inside the period module, flanking the period digit
-  //
-  const renderBasketball = (withFouls: boolean) => {
-    const pfActive =
-      (state.lastFoulPlayer ?? null) !== null && state.lastFoulPlayer !== 0;
-
-    return (
-      <Board>
-        {/* Branding strip */}
-        <div
-          style={{
-            background: "#000",
-            borderBottom: "2px solid #222",
-            fontFamily: LABEL_FONT,
-            fontWeight: 900,
-            fontSize: 13,
-            letterSpacing: "0.25em",
-            color: "#555",
-            textAlign: "center",
-            padding: "4px 0",
-          }}
-        >
-          DAKTRONICS
-        </div>
-
-        <div
-          style={{
-            background: "#111",
-            padding: "16px 20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
-        >
-          {/* ── ROW 1: Clock centered — LARGE ── */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Module style={{ padding: "12px 48px" }}>
-              {/*
-                Clock is the hero element — 180px tall to match reference.
-                On the real board the clock is the single most prominent digit.
-              */}
-              <SegText text={clockStr} height={180} color={AMBER} />
-            </Module>
-          </div>
-
-          {/* ── ROW 2: Score | Period | Score  (3fr 1.4fr 3fr) ── */}
-          {/*
-            Period column is intentionally narrower (1.4fr vs 3fr) so it reads
-            as a secondary element, matching the reference image proportions.
-          */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "3fr 1.4fr 3fr",
-              gap: 12,
-              alignItems: "start",
-            }}
-          >
-            {/* HOME score */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 6,
-              }}
+        {/* Overlays */}
+        <AnimatePresence>
+          {state.timeoutTeam && (
+            <motion.div
+              key="timeout"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-primary text-primary-foreground rounded-lg px-6 py-3 flex items-center justify-center gap-3 font-display font-bold text-lg uppercase tracking-wider"
             >
-              <Label style={{ fontSize: "clamp(20px, 3vw, 40px)" }}>
-                {state.homeName}
-              </Label>
-              <Module
-                style={{
-                  width: "100%",
-                  padding: "18px 8px",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                {/*
-                  Ghost layer: always render dim "888" behind the live value.
-                  We achieve this by stacking two SevenSegNumber components in
-                  a position:relative wrapper — ghost at opacity 1 with dim color,
-                  real value on top with position:absolute and full color.
-                  This guarantees the ghost outline is always visible regardless
-                  of whether the digit is 0 or undefined.
-                */}
-                <div style={{ position: "relative", display: "inline-flex" }}>
-                  {/* Ghost layer — always lit dim */}
-                  <SevenSegNumber
-                    value={888}
-                    digits={3}
-                    height={240}
-                    color={GHOST_RED}
-                  />
-                  {/* Live value — on top */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <SevenSegNumber
-                      value={state.homeScore}
-                      digits={3}
-                      height={240}
-                      color={RED}
-                    />
-                  </div>
-                </div>
-              </Module>
-              <Label style={{ fontSize: "clamp(16px, 2.2vw, 30px)" }}>
-                SCORE
-              </Label>
-            </div>
-
-            {/* CENTER: PERIOD label + module */}
-            {/*
-              The period digit is shorter (150px) than the score digits (240px),
-              making it clearly a secondary/supporting display.
-              Possession arrows sit beside the digit; "B" bonus indicators are
-              below the digit inside the same module, flanking it — matching the
-              reference image where "B" appears on both sides of the period digit.
-            */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 6,
-              }}
+              <Hand className="h-5 w-5" />
+              Timeout — {state.timeoutTeam === "home" ? state.homeTeam : state.awayTeam}
+            </motion.div>
+          )}
+          {state.sport === "football" && state.flagOnPlay && (
+            <motion.div
+              key="flag"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-yellow-500 text-black rounded-lg px-6 py-3 flex items-center justify-center gap-3 font-display font-bold text-lg uppercase tracking-wider"
             >
-              <Label style={{ fontSize: "clamp(13px, 1.6vw, 22px)" }}>
-                PERIOD
-              </Label>
-              <Module
-                style={{
-                  width: "100%",
-                  padding: "14px 6px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                {/* Possession arrow row + period digit */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    width: "100%",
-                    justifyContent: "center",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "clamp(16px, 2vw, 26px)",
-                      fontFamily: LABEL_FONT,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      flexShrink: 0,
-                      color:
-                        state.possession === "home" ? AMBER : "#1c1c1c",
-                      textShadow:
-                        state.possession === "home"
-                          ? `0 0 14px ${AMBER}`
-                          : "none",
-                      transition: "color 0.15s, text-shadow 0.15s",
-                    }}
-                  >
-                    ◄
+              <Flag className="h-5 w-5" /> Flag on the Play
+            </motion.div>
+          )}
+          {state.sport === "football" && state.challengeTeam && (
+            <motion.div
+              key="challenge"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-destructive text-destructive-foreground rounded-lg px-6 py-3 flex items-center justify-center gap-3 font-display font-bold text-lg uppercase tracking-wider"
+            >
+              <AlertTriangle className="h-5 w-5" />
+              Challenge — {state.challengeTeam === "home" ? state.homeTeam : state.awayTeam}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Main Scoreboard */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-2xl">
+
+          {/* ── ROW 1: Sport bar + Clock ── */}
+          <div className="bg-secondary px-6 py-3 flex items-center justify-between gap-4">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground font-display w-24">{state.sport}</span>
+
+            {/* Clock — centered, large */}
+            <div className="flex-1 flex justify-center">
+              {state.sport !== "baseball" && d.showClock && (
+                <div className="bg-black rounded-md px-6 py-2 relative inline-flex items-center justify-center">
+                  {/* Ghost digits */}
+                  <span className="font-mono text-7xl font-bold tracking-wider tabular-nums select-none pointer-events-none absolute text-[#1a1a00]">
+                    {ghostClock}
                   </span>
-                  {/* Period digit — 150px tall (smaller than 240px scores) */}
-                  <div style={{ position: "relative", display: "inline-flex" }}>
-                    <SevenSegNumber
-                      value={8}
-                      digits={1}
-                      height={150}
-                      color={GHOST_AMBER}
-                    />
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={clockText}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="font-mono text-7xl font-bold text-[hsl(var(--primary))] tracking-wider tabular-nums relative z-10"
                     >
-                      <SevenSegNumber
-                        value={state.period}
-                        digits={1}
-                        height={150}
-                        color={AMBER}
-                      />
+                      {clockText}
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
+              )}
+              {state.sport === "baseball" && (
+                <div className="flex gap-5 items-center">
+                  {[
+                    { label: "B", count: state.balls, max: 4, color: "bg-primary" },
+                    { label: "S", count: state.strikes, max: 2, color: "bg-destructive" },
+                    { label: "O", count: state.outs, max: 2, color: "bg-foreground" },
+                  ].map(({ label, count, max, color }) => (
+                    <div key={label} className="text-center">
+                      <span className="text-xs text-muted-foreground font-display">{label}</span>
+                      <div className="flex gap-1 mt-1">
+                        {Array.from({ length: max }).map((_, i) => (
+                          <div key={i} className={`w-3 h-3 rounded-full border border-primary ${i < count ? color : ""}`} />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: "clamp(16px, 2vw, 26px)",
-                      fontFamily: LABEL_FONT,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      flexShrink: 0,
-                      color:
-                        state.possession === "guest" ? AMBER : "#1c1c1c",
-                      textShadow:
-                        state.possession === "guest"
-                          ? `0 0 14px ${AMBER}`
-                          : "none",
-                      transition: "color 0.15s, text-shadow 0.15s",
-                    }}
-                  >
-                    ►
-                  </span>
+                  ))}
                 </div>
-
-                {/* Bonus "B" indicators inside module, flanking — like reference */}
-                <div
-                  style={{
-                    display: "flex",
-                    width: "100%",
-                    justifyContent: "space-between",
-                    padding: "0 8px",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontFamily: LABEL_FONT,
-                      fontWeight: 900,
-                      fontSize: "clamp(14px, 1.8vw, 22px)",
-                      color:
-                        state.bonus === "home" || state.doubleBonus === "home"
-                          ? AMBER
-                          : "#1c1c1c",
-                      textShadow:
-                        state.bonus === "home" || state.doubleBonus === "home"
-                          ? `0 0 10px ${AMBER}`
-                          : "none",
-                      transition: "color 0.15s",
-                    }}
-                  >
-                    B
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: LABEL_FONT,
-                      fontWeight: 900,
-                      fontSize: "clamp(14px, 1.8vw, 22px)",
-                      color:
-                        state.bonus === "guest" ||
-                        state.doubleBonus === "guest"
-                          ? AMBER
-                          : "#1c1c1c",
-                      textShadow:
-                        state.bonus === "guest" ||
-                        state.doubleBonus === "guest"
-                          ? `0 0 10px ${AMBER}`
-                          : "none",
-                      transition: "color 0.15s",
-                    }}
-                  >
-                    B
-                  </span>
-                </div>
-              </Module>
-              {/* Invisible spacer to align bottom with SCORE label */}
-              <Label
-                style={{
-                  fontSize: "clamp(16px, 2.2vw, 30px)",
-                  opacity: 0,
-                  pointerEvents: "none",
-                }}
-              >
-                SCORE
-              </Label>
+              )}
             </div>
 
-            {/* GUEST score */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Label style={{ fontSize: "clamp(20px, 3vw, 40px)" }}>
-                {state.guestName}
-              </Label>
-              <Module
-                style={{
-                  width: "100%",
-                  padding: "18px 8px",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ position: "relative", display: "inline-flex" }}>
-                  <SevenSegNumber
-                    value={888}
-                    digits={3}
-                    height={240}
-                    color={GHOST_RED}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <SevenSegNumber
-                      value={state.guestScore}
-                      digits={3}
-                      height={240}
-                      color={RED}
-                    />
-                  </div>
-                </div>
-              </Module>
-              <Label style={{ fontSize: "clamp(16px, 2.2vw, 30px)" }}>
-                SCORE
-              </Label>
+            <div className="w-24 text-right">
+              {state.sport !== "baseball" && (
+                <span className="text-xs text-muted-foreground font-display">{state.clockRunning ? "LIVE" : "STOPPED"}</span>
+              )}
+              {state.sport === "baseball" && (
+                <span className="text-xs text-muted-foreground font-display">{state.outs} OUT{state.outs !== 1 ? "S" : ""}</span>
+              )}
             </div>
           </div>
 
-          {/* ── ROW 3: Fouls | Player Foul + MATCH/TOL | Fouls  (3fr 1.4fr 3fr) ── */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "3fr 1.4fr 3fr",
-              gap: 12,
-              alignItems: "start",
-            }}
-          >
-            {/* HOME fouls */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>
-                FOULS
-              </Label>
-              <Module
-                style={{
-                  width: "100%",
-                  padding: "12px 8px",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                {/*
-                  Fouls: ghost layer always shows "88", live value on top.
-                  Height increased to 130px (was 100px) to match reference.
-                */}
-                <div style={{ position: "relative", display: "inline-flex" }}>
-                  <SevenSegNumber
-                    value={88}
-                    digits={2}
-                    height={130}
-                    color={GHOST_RED}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
+          {/* ── ROW 2: HOME | PERIOD | GUEST ── */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-0 px-8 pt-8 pb-4">
+
+            {/* HOME */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                <PossessionDot side="home" />
+                <h2 className="text-3xl md:text-4xl font-display font-extrabold tracking-tight text-foreground uppercase">
+                  {state.homeTeam}
+                </h2>
+              </div>
+              {/* LED score box */}
+              <div className="bg-black border-2 border-border rounded-md w-full flex items-center justify-center py-4 relative">
+                {/* Ghost */}
+                <span className="font-mono text-8xl font-black tracking-widest tabular-nums text-[#1a0000] select-none pointer-events-none absolute">
+                  {ghostScore}
+                </span>
+                <AnimatePresence mode="popLayout">
+                  <motion.span
+                    key={state.homeScore}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -20, opacity: 0 }}
+                    className="font-mono text-8xl font-black text-destructive tracking-widest tabular-nums relative z-10"
                   >
-                    <SevenSegNumber
-                      value={state.homeFouls}
-                      digits={2}
-                      height={130}
-                      color={RED}
-                    />
-                  </div>
+                    {state.homeScore}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+              {/* Timeouts */}
+              {d.showTimeouts && config.timeoutsPerHalf > 0 && (
+                <div className="flex gap-1.5">
+                  {Array.from({ length: config.timeoutsPerHalf }).map((_, i) => (
+                    <div key={i} className={`w-3 h-3 rounded-full border border-primary ${i < state.homeTimeouts ? "bg-primary" : "bg-transparent"}`} />
+                  ))}
                 </div>
-              </Module>
+              )}
             </div>
 
-            {/* CENTER: Player Foul display + MATCH label + TOL pair */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Label style={{ fontSize: "clamp(13px, 1.6vw, 22px)" }}>
-                PLAYER FOUL
-              </Label>
-              {/*
-                Ghost segments: ALWAYS render the "## #" skeleton (2 digits,
-                gap, 1 digit) at dim amber. When pfActive, live digits overlay
-                on top at full AMBER. This matches the real Daktronics board
-                behavior exactly.
-              */}
-              <Module
-                style={{
-                  width: "100%",
-                  padding: "12px 8px",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  {/* Player number: 2 ghost digits */}
-                  <div
-                    style={{ position: "relative", display: "inline-flex" }}
-                  >
-                    <SevenSegNumber
-                      value={88}
-                      digits={2}
-                      height={130}
-                      color={GHOST_AMBER}
-                    />
-                    {pfActive && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
+            {/* CENTER — Period */}
+            <div className="flex flex-col items-center gap-2 px-6">
+              {d.showPeriod && state.sport !== "baseball" && (
+                <>
+                  <span className="text-sm font-display font-semibold text-foreground uppercase tracking-widest">
+                    {config.periodName}
+                  </span>
+                  {/* LED period box — narrower */}
+                  <div className="bg-black border-2 border-border rounded-md w-28 flex items-center justify-center py-4 relative">
+                    <span className="font-mono text-7xl font-black tracking-widest tabular-nums text-[#1a1a00] select-none pointer-events-none absolute">
+                      {ghostPeriod}
+                    </span>
+                    <AnimatePresence mode="popLayout">
+                      <motion.span
+                        key={state.period}
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -20, opacity: 0 }}
+                        className="font-mono text-7xl font-black text-primary tracking-widest tabular-nums relative z-10"
                       >
-                        <SevenSegNumber
-                          value={state.lastFoulPlayer ?? 0}
-                          digits={2}
-                          height={130}
-                          color={AMBER}
-                        />
-                      </div>
-                    )}
+                        {state.sport === "baseball"
+                          ? `${state.inningHalf === "top" ? "▲" : "▼"}${state.inning}`
+                          : state.period}
+                      </motion.span>
+                    </AnimatePresence>
                   </div>
+                </>
+              )}
+              {d.showStoppage && state.sport === "soccer" && state.stoppage && (
+                <span className="text-sm text-destructive font-display font-semibold">{state.stoppage}</span>
+              )}
+              <div className="text-xs text-muted-foreground uppercase tracking-wide font-display">VS</div>
+            </div>
 
-                  {/* Foul count: 1 ghost digit */}
-                  <div
-                    style={{ position: "relative", display: "inline-flex" }}
+            {/* GUEST / AWAY */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-3xl md:text-4xl font-display font-extrabold tracking-tight text-foreground uppercase">
+                  {state.awayTeam}
+                </h2>
+                <PossessionDot side="away" />
+              </div>
+              {/* LED score box */}
+              <div className="bg-black border-2 border-border rounded-md w-full flex items-center justify-center py-4 relative">
+                <span className="font-mono text-8xl font-black tracking-widest tabular-nums text-[#1a0000] select-none pointer-events-none absolute">
+                  {ghostScore}
+                </span>
+                <AnimatePresence mode="popLayout">
+                  <motion.span
+                    key={state.awayScore}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -20, opacity: 0 }}
+                    className="font-mono text-8xl font-black text-destructive tracking-widest tabular-nums relative z-10"
                   >
-                    <SevenSegNumber
-                      value={8}
-                      digits={1}
-                      height={130}
-                      color={GHOST_AMBER}
-                    />
-                    {pfActive && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <SevenSegNumber
-                          value={state.lastFoulCount ?? 0}
-                          digits={1}
-                          height={130}
-                          color={AMBER}
-                        />
-                      </div>
-                    )}
-                  </div>
+                    {state.awayScore}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
+              {d.showTimeouts && config.timeoutsPerHalf > 0 && (
+                <div className="flex gap-1.5">
+                  {Array.from({ length: config.timeoutsPerHalf }).map((_, i) => (
+                    <div key={i} className={`w-3 h-3 rounded-full border border-primary ${i < state.awayTimeouts ? "bg-primary" : "bg-transparent"}`} />
+                  ))}
                 </div>
-              </Module>
+              )}
+            </div>
+          </div>
 
-              {/* MATCH label + TOL pair */}
-              <Label style={{ fontSize: "clamp(14px, 1.8vw, 24px)" }}>
-                MATCH
-              </Label>
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  <Label style={{ fontSize: "clamp(10px, 1.2vw, 16px)" }}>
-                    TOL
-                  </Label>
-                  <Module style={{ padding: "5px 10px" }}>
-                    <div
-                      style={{ position: "relative", display: "inline-flex" }}
-                    >
-                      <SevenSegNumber
-                        value={8}
-                        digits={1}
-                        height={44}
-                        color={GHOST_AMBER}
-                      />
-                      <div
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <SevenSegNumber
-                          value={state.homeTOL}
-                          digits={1}
-                          height={44}
-                          color={GREEN}
-                        />
-                      </div>
-                    </div>
-                  </Module>
+          {/* ── ROW 3: FOULS | PLAYER FOUL | FOULS (basketball) ── */}
+          {d.showFouls && state.sport === "basketball" && (
+            <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-0 px-8 pb-6">
+
+              {/* Home fouls — square box */}
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-sm font-display font-bold text-foreground uppercase tracking-widest">Fouls</span>
+                <div className="bg-black border-2 border-border rounded-md aspect-square w-20 flex items-center justify-center relative">
+                  <span className="font-mono text-5xl font-black tabular-nums text-[#1a0000] select-none pointer-events-none absolute">
+                    {ghostFoul}
+                  </span>
+                  <span className="font-mono text-5xl font-black text-destructive tabular-nums relative z-10">
+                    {state.homeFouls}
+                  </span>
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  <Label style={{ fontSize: "clamp(10px, 1.2vw, 16px)" }}>
-                    TOL
-                  </Label>
-                  <Module style={{ padding: "5px 10px" }}>
-                    <div
-                      style={{ position: "relative", display: "inline-flex" }}
-                    >
-                      <SevenSegNumber
-                        value={8}
-                        digits={1}
-                        height={44}
-                        color={GHOST_AMBER}
-                      />
-                      <div
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <SevenSegNumber
-                          value={state.guestTOL}
-                          digits={1}
-                          height={44}
-                          color={GREEN}
-                        />
-                      </div>
-                    </div>
-                  </Module>
+              </div>
+
+              {/* Player foul — center wide box */}
+              <div className="flex flex-col items-center gap-1 px-6">
+                <span className="text-sm font-display font-bold text-foreground uppercase tracking-widest">Player Foul</span>
+                {(state.homePlayerFouls.length > 0 || state.awayPlayerFouls.length > 0) ? (
+                  <div className="bg-black border-2 border-border rounded-md px-6 py-3 relative flex items-center justify-center">
+                    <span className="font-mono text-5xl font-black tabular-nums text-[#1a1a00] select-none pointer-events-none absolute tracking-[0.3em]">
+                      {ghostPlayerFoul}
+                    </span>
+                    {/* Show most recent player foul entry */}
+                    {(() => {
+                      const latest = [...state.homePlayerFouls, ...state.awayPlayerFouls].sort((a, b) => b.fouls - a.fouls)[0];
+                      return latest ? (
+                        <span className="font-mono text-5xl font-black text-primary tabular-nums relative z-10 tracking-[0.3em]">
+                          {latest.player} {latest.fouls}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
+                ) : (
+                  <div className="bg-black border-2 border-border rounded-md px-6 py-3 flex items-center justify-center">
+                    <span className="font-mono text-5xl font-black text-[#1a1a00] tabular-nums tracking-[0.3em]">
+                      {ghostPlayerFoul}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Away fouls — square box */}
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-sm font-display font-bold text-foreground uppercase tracking-widest">Fouls</span>
+                <div className="bg-black border-2 border-border rounded-md aspect-square w-20 flex items-center justify-center relative">
+                  <span className="font-mono text-5xl font-black tabular-nums text-[#1a0000] select-none pointer-events-none absolute">
+                    {ghostFoul}
+                  </span>
+                  <span className="font-mono text-5xl font-black text-destructive tabular-nums relative z-10">
+                    {state.awayFouls}
+                  </span>
                 </div>
               </div>
             </div>
+          )}
 
-            {/* GUEST fouls */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <Label style={{ fontSize: "clamp(16px, 2.2vw, 28px)" }}>
-                FOULS
-              </Label>
-              <Module
-                style={{
-                  width: "100%",
-                  padding: "12px 8px",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ position: "relative", display: "inline-flex" }}>
-                  <SevenSegNumber
-                    value={88}
-                    digits={2}
-                    height={130}
-                    color={GHOST_RED}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <SevenSegNumber
-                      value={state.guestFouls}
-                      digits={2}
-                      height={130}
-                      color={RED}
-                    />
-                  </div>
-                </div>
-              </Module>
-            </div>
+          {/* ── ROW 3 labels: SCORE | MATCH | SCORE ── */}
+          <div className="grid grid-cols-3 bg-secondary px-8 py-2">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground font-display text-center">Score</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground font-display text-center">Match</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground font-display text-center">Score</span>
           </div>
 
-          {/* ── Optional player foul grid (indoor-bball-fouls) ── */}
-          {withFouls && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 24,
-                paddingTop: 16,
-                borderTop: "2px solid #27272a",
-              }}
-            >
-              <PlayerFoulCol
-                title={state.homeName}
-                players={state.homePlayers}
-              />
-              <PlayerFoulCol
-                title={state.guestName}
-                players={state.guestPlayers}
-              />
+          {/* ── Football-specific footer ── */}
+          {d.showDownDistance && state.sport === "football" && (
+            <div className="bg-secondary px-6 py-3 flex items-center justify-center gap-6 text-sm font-display">
+              <span className="text-foreground font-bold">{ordinal(state.down)} & {state.yardsToGo}</span>
+              <span className="text-muted-foreground">Ball on {state.ballOn}</span>
+            </div>
+          )}
+
+          {/* ── Hockey stats footer ── */}
+          {state.sport === "hockey" && (d.showSOG || d.showPIM) && (
+            <div className="bg-secondary px-6 py-3 flex items-center justify-center gap-6 text-sm font-display">
+              {d.showSOG && (
+                <span className="text-muted-foreground">
+                  SOG: <span className="text-foreground font-bold">{state.homeSOG}</span>
+                  {" - "}
+                  <span className="text-foreground font-bold">{state.awaySOG}</span>
+                </span>
+              )}
+              {d.showPIM && (
+                <span className="text-muted-foreground">
+                  PIM: <span className="text-foreground font-bold">{state.homePenaltyMinutes}</span>
+                  {" - "}
+                  <span className="text-foreground font-bold">{state.awayPenaltyMinutes}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* ── Player fouls detail panel (basketball) ── */}
+          {d.showPlayerFouls && state.sport === "basketball" && (state.homePlayerFouls.length > 0 || state.awayPlayerFouls.length > 0) && (
+            <div className="bg-card border-t border-border px-6 py-3 grid grid-cols-2 gap-6 text-xs font-display">
+              {(["home", "away"] as const).map((side) => {
+                const list = side === "home" ? state.homePlayerFouls : state.awayPlayerFouls;
+                return (
+                  <div key={side}>
+                    <div className="text-muted-foreground uppercase mb-1">
+                      {side === "home" ? state.homeTeam : state.awayTeam} Player Fouls
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {list.map((p) => (
+                        <span
+                          key={p.player}
+                          className={`px-2 py-0.5 rounded ${p.fouls >= 5 ? "bg-destructive text-destructive-foreground" : "bg-secondary text-foreground"}`}
+                        >
+                          {p.player}: <strong>{p.fouls}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
-      </Board>
-    );
-  };
 
-  // ── All other layouts unchanged ─────────────────────────────────────────────
-
-  const Panel = ({ children, className = "" }: any) => (
-    <div
-      className={`bg-black border-4 border-zinc-800 rounded-lg p-6 ${className}`}
-      style={{
-        boxShadow:
-          "inset 0 0 40px rgba(0,0,0,0.9), 0 8px 30px rgba(0,0,0,0.7)",
-      }}
-    >
-      {children}
-    </div>
-  );
-
-  const Label2 = ({ children, className = "" }: any) => (
-    <div
-      className={`tracking-wider text-center uppercase text-white ${className}`}
-      style={{ fontFamily: LABEL_FONT, fontWeight: 900 }}
-    >
-      {children}
-    </div>
-  );
-
-  const TeamBlock = ({
-    name,
-    score,
-    color,
-    dotsBonus,
-    dotsDouble,
-  }: any) => (
-    <div className="flex flex-col items-center gap-3 flex-1">
-      <Label2 className="text-4xl md:text-6xl truncate w-full px-2">
-        {name}
-      </Label2>
-      <SevenSegNumber value={score} digits={3} height={220} color={color} />
-      {(dotsBonus || dotsDouble) && (
-        <div className="flex gap-2 mt-1">
-          <div
-            className="w-5 h-5 rounded-full"
-            style={{
-              background: dotsBonus ? AMBER : "#222",
-              boxShadow: dotsBonus ? `0 0 10px ${AMBER}` : "none",
-            }}
-          />
-          <div
-            className="w-5 h-5 rounded-full"
-            style={{
-              background: dotsDouble ? RED : "#222",
-              boxShadow: dotsDouble ? `0 0 10px ${RED}` : "none",
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
-
-  const renderFootball = () => (
-    <Panel className="w-full max-w-[1600px]">
-      <div className="grid grid-cols-3 gap-8">
-        <TeamBlock
-          name={state.homeName}
-          score={state.homeScore}
-          color={RED}
-        />
-        <div className="flex flex-col items-center gap-6 border-x-2 border-zinc-800 px-6">
-          <div className="text-center">
-            <Label2 className="text-2xl">Qtr</Label2>
-            <SevenSegNumber
-              value={state.period}
-              digits={1}
-              height={110}
-              color={AMBER}
-            />
-          </div>
-          <div className="text-center">
-            <Label2 className="text-2xl">Clock</Label2>
-            <SegText text={clockStr} height={160} color={RED} />
-          </div>
-          <div className="grid grid-cols-3 gap-4 w-full">
-            <div className="text-center">
-              <Label2 className="text-xl">Down</Label2>
-              <SevenSegNumber
-                value={state.down}
-                digits={1}
-                height={70}
-                color={AMBER}
-              />
-            </div>
-            <div className="text-center">
-              <Label2 className="text-xl">To Go</Label2>
-              <SevenSegNumber
-                value={state.distance}
-                digits={2}
-                height={70}
-                color={AMBER}
-              />
-            </div>
-            <div className="text-center">
-              <Label2 className="text-xl">Ball On</Label2>
-              <SevenSegNumber
-                value={state.ballOn}
-                digits={2}
-                height={70}
-                color={AMBER}
-              />
-            </div>
-          </div>
-        </div>
-        <TeamBlock
-          name={state.guestName}
-          score={state.guestScore}
-          color={RED}
-        />
-      </div>
-    </Panel>
-  );
-
-  const renderHockey = () => (
-    <Panel className="w-full max-w-[1600px]">
-      <div className="grid grid-cols-3 gap-8">
-        <div className="flex flex-col items-center gap-4">
-          <Label2 className="text-5xl">{state.homeName}</Label2>
-          <SevenSegNumber
-            value={state.homeScore}
-            digits={2}
-            height={210}
-            color={RED}
-          />
-          <div className="text-center">
-            <Label2 className="text-xl">SOG</Label2>
-            <SevenSegNumber
-              value={state.homeSOG}
-              digits={2}
-              height={70}
-              color={AMBER}
-            />
-          </div>
-          <div className="text-center">
-            <Label2 className="text-xl">Penalty</Label2>
-            <SegText
-              text={formatClock(state.homePenaltyMs)}
-              height={70}
-              color={AMBER}
-            />
-          </div>
-        </div>
-        <div className="flex flex-col items-center gap-6 border-x-2 border-zinc-800 px-6">
-          <div className="text-center">
-            <Label2 className="text-2xl">Period</Label2>
-            <SevenSegNumber
-              value={state.period}
-              digits={1}
-              height={110}
-              color={AMBER}
-            />
-          </div>
-          <div className="text-center">
-            <Label2 className="text-2xl">Clock</Label2>
-            <SegText text={clockStr} height={170} color={RED} />
-          </div>
-        </div>
-        <div className="flex flex-col items-center gap-4">
-          <Label2 className="text-5xl">{state.guestName}</Label2>
-          <SevenSegNumber
-            value={state.guestScore}
-            digits={2}
-            height={210}
-            color={RED}
-          />
-          <div className="text-center">
-            <Label2 className="text-xl">SOG</Label2>
-            <SevenSegNumber
-              value={state.guestSOG}
-              digits={2}
-              height={70}
-              color={AMBER}
-            />
-          </div>
-          <div className="text-center">
-            <Label2 className="text-xl">Penalty</Label2>
-            <SegText
-              text={formatClock(state.guestPenaltyMs)}
-              height={70}
-              color={AMBER}
-            />
-          </div>
-        </div>
-      </div>
-    </Panel>
-  );
-
-  const renderSoccer = () => (
-    <Panel className="w-full max-w-[1400px]">
-      <div className="grid grid-cols-3 gap-8 items-center">
-        <TeamBlock
-          name={state.homeName}
-          score={state.homeScore}
-          color={GREEN}
-        />
-        <div className="flex flex-col items-center gap-6 border-x-2 border-zinc-800 px-6">
-          <div className="text-center">
-            <Label2 className="text-2xl">Half</Label2>
-            <SevenSegNumber
-              value={state.period}
-              digits={1}
-              height={90}
-              color={AMBER}
-            />
-          </div>
-          <div className="text-center">
-            <Label2 className="text-2xl">Time</Label2>
-            <SegText text={clockStr} height={170} color={GREEN} />
-          </div>
-        </div>
-        <TeamBlock
-          name={state.guestName}
-          score={state.guestScore}
-          color={GREEN}
-        />
-      </div>
-    </Panel>
-  );
-
-  const renderBaseball = () => (
-    <Panel className="w-full max-w-[1400px]">
-      <div className="grid grid-cols-3 gap-8">
-        <TeamBlock
-          name={state.homeName}
-          score={state.homeScore}
-          color={RED}
-        />
-        <div className="flex flex-col items-center gap-4 border-x-2 border-zinc-800 px-6">
-          <div className="flex items-center gap-4">
-            <Label2 className="text-2xl">Inn</Label2>
-            <SegText
-              text={`${state.inningHalf}${state.inning}`}
-              height={100}
-              color={AMBER}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-3 w-full">
-            <div className="text-center">
-              <Label2 className="text-xl">B</Label2>
-              <SevenSegNumber
-                value={state.balls}
-                digits={1}
-                height={70}
-                color={GREEN}
-              />
-            </div>
-            <div className="text-center">
-              <Label2 className="text-xl">S</Label2>
-              <SevenSegNumber
-                value={state.strikes}
-                digits={1}
-                height={70}
-                color={AMBER}
-              />
-            </div>
-            <div className="text-center">
-              <Label2 className="text-xl">O</Label2>
-              <SevenSegNumber
-                value={state.outs}
-                digits={1}
-                height={70}
-                color={RED}
-              />
-            </div>
-          </div>
-        </div>
-        <TeamBlock
-          name={state.guestName}
-          score={state.guestScore}
-          color={RED}
-        />
-      </div>
-    </Panel>
-  );
-
-  const renderMinimal = () => (
-    <Panel className="w-full max-w-[1200px]">
-      <div className="grid grid-cols-3 gap-8 items-center">
-        <TeamBlock
-          name={state.homeName}
-          score={state.homeScore}
-          color={RED}
-        />
-        <SegText text={clockStr} height={180} color={AMBER} />
-        <TeamBlock
-          name={state.guestName}
-          score={state.guestScore}
-          color={RED}
-        />
-      </div>
-    </Panel>
-  );
-
-  const layoutMap: Record<string, JSX.Element> = {
-    "indoor-bball": renderBasketball(false),
-    "indoor-bball-fouls": renderBasketball(true),
-    "outdoor-football": renderFootball(),
-    hockey: renderHockey(),
-    soccer: renderSoccer(),
-    baseball: renderBaseball(),
-    minimal: renderMinimal(),
-  };
-
-  return (
-    <div
-      className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-8"
-      style={{
-        background: "radial-gradient(ellipse at center, #0a0a0a 0%, #000 80%)",
-      }}
-    >
-      {hornFlash && (
-        <div
-          className="fixed inset-0 pointer-events-none animate-pulse"
-          style={{ background: "rgba(255,200,0,0.15)" }}
-        />
-      )}
-      {layoutMap[state.layout] || renderMinimal()}
-    </div>
-  );
-}
-
-function PlayerFoulCol({
-  title,
-  players,
-}: {
-  title: string;
-  players: any[];
-}) {
-  return (
-    <div>
-      <div
-        className="text-center text-xl uppercase mb-2 tracking-wider"
-        style={{
-          fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif",
-          fontWeight: 900,
-          color: "#ffffff",
-        }}
-      >
-        {title} • Player Fouls
-      </div>
-      <div className="grid grid-cols-5 gap-2">
-        {players.length === 0 && (
-          <div className="col-span-5 text-zinc-600 text-xs text-center">
-            No players logged
-          </div>
-        )}
-        {players.map((p, i) => (
-          <div
-            key={i}
-            className="bg-zinc-950 border border-zinc-800 rounded p-2 text-center"
+        {/* ── Live Stat Feed ── */}
+        {d.showStats && state.statLog.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-card border border-border rounded-xl overflow-hidden shadow-lg"
           >
-            <div className="text-amber-400 font-bold text-lg">#{p.number}</div>
-            <div className="text-red-500 font-mono text-xl">{p.fouls}F</div>
-            <div className="text-zinc-400 font-mono text-sm">{p.points}pt</div>
-          </div>
-        ))}
+            <div className="bg-secondary px-6 py-2">
+              <span className="text-xs uppercase tracking-widest text-muted-foreground font-display">Live Stats</span>
+            </div>
+            <div className="max-h-48 overflow-y-auto">
+              {[...state.statLog].reverse().slice(0, 10).map((entry, i) => (
+                <motion.div
+                  key={entry.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="px-6 py-2 flex items-center gap-4 border-b border-border last:border-0"
+                >
+                  <span className="font-mono text-xs text-muted-foreground w-14 shrink-0">{entry.clock}</span>
+                  <span className="text-xs font-bold text-primary w-16 shrink-0 uppercase">
+                    {entry.team === "home" ? state.homeTeam : state.awayTeam}
+                  </span>
+                  <span className="text-sm text-foreground">{entry.player}</span>
+                  <span className="text-sm font-semibold text-foreground ml-auto">{entry.action}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
       </div>
     </div>
   );
-}
+};
+
+export default ScoreboardDisplay;
