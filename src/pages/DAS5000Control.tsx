@@ -338,6 +338,10 @@ export default function DAS5000Control() {
     homeBonus:      useCallback(() => act(() => update(p => ({ bonus: p.bonus === "home" ? "none" : "home" }))), [act, update]),
     homeDblBonus:   useCallback(() => act(() => update(p => ({ doubleBonus: p.doubleBonus === "home" ? "none" : "home" }))), [act, update]),
     homeSetShot:    useCallback(() => { setArmedSide("home"); press("SET SHOT"); }, [press]),
+    homePlrFoul:    useCallback(() => { setArmedSide("home"); setArmedFn("PLR FOUL"); }, []),
+    homeMassSub:    useCallback(() => { setArmedSide("home"); setArmedFn("MASS SUB"); }, []),
+    homeInOut:      useCallback(() => { setArmedSide("home"); setArmedFn("IN/OUT"); }, []),
+
 
     guestScore1:     useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 1 }))), [act, update]),
     guestScore2:     useCallback(() => act(() => update(p => ({ guestScore: p.guestScore + 2 }))), [act, update]),
