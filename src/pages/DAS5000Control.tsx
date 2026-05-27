@@ -636,8 +636,8 @@ export default function DAS5000Control() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-1">
-                    {[["30s", cb.shot30], ["14s", cb.shot14]].map(([lbl, fn]) => (
-                      <button key={lbl as string} onPointerDown={fn as () => void}
+                    {([["30s", cb.shot30], ["14s", cb.shot14]] as [string, () => void][]).map(([lbl, fn]) => (
+                      <button key={lbl} onPointerDown={fn}
                         className="rounded font-black uppercase flex items-center justify-center select-none touch-none"
                         style={{
                           height: 26, fontFamily: "Impact, sans-serif", fontSize: "clamp(7px, 0.9vw, 10px)",
@@ -647,6 +647,7 @@ export default function DAS5000Control() {
                         }}>{lbl}</button>
                     ))}
                   </div>
+
 
                   <RB label="◼ HORN" onClick={cb.horn} color="yellow" />
                   <RB label="▶ START" onClick={cb.start} color="green" />
