@@ -293,6 +293,9 @@ export default function DAS5000Control() {
         }
         break;
       }
+    }
+
+
 
     setStatus("OK");
     setArmedFn(null); setArmedSide(null); setPendingDigits("");
