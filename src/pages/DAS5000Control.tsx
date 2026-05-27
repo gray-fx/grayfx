@@ -354,6 +354,10 @@ export default function DAS5000Control() {
     guestBonus:      useCallback(() => act(() => update(p => ({ bonus: p.bonus === "guest" ? "none" : "guest" }))), [act, update]),
     guestDblBonus:   useCallback(() => act(() => update(p => ({ doubleBonus: p.doubleBonus === "guest" ? "none" : "guest" }))), [act, update]),
     guestSetShot:    useCallback(() => { setArmedSide("guest"); press("SET SHOT"); }, [press]),
+    guestPlrFoul:    useCallback(() => { setArmedSide("guest"); setArmedFn("PLR FOUL"); }, []),
+    guestMassSub:    useCallback(() => { setArmedSide("guest"); setArmedFn("MASS SUB"); }, []),
+    guestInOut:      useCallback(() => { setArmedSide("guest"); setArmedFn("IN/OUT"); }, []),
+
 
     periodPlus:   useCallback(() => update({ period: state.period + 1 }), [update, state.period]),
     periodMinus:  useCallback(() => update({ period: Math.max(1, state.period - 1) }), [update, state.period]),
