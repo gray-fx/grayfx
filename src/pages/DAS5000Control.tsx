@@ -544,10 +544,19 @@ export default function DAS5000Control() {
                   <SQ label="TIME OUT" sub="TOL −" color="green" onClick={cb.homeTOL} />
                   <SQ label="POSS ►" color="green" onClick={cb.homePoss} active={state.possession === "home"} />
                 </div>
-                <div className="grid grid-cols-2 gap-1">
+                <div className="grid grid-cols-2 gap-1 mb-1">
                   <SQ label="BONUS" color="green" onClick={cb.homeBonus} active={state.bonus === "home"} />
                   <SQ label="SET SHOT" sub="CLK" color="green" onClick={cb.homeSetShot} armed={armedFn === "SET SHOT" && armedSide === "home"} />
                 </div>
+                <div className="grid grid-cols-2 gap-1 mb-1">
+                  <SQ label="PLAYER" sub="& FOUL" color="green" onClick={cb.homePlrFoul} armed={armedFn === "PLR FOUL" && armedSide === "home"} />
+                  <SQ label="MASS" sub="SUB" color="green" onClick={cb.homeMassSub} armed={armedFn === "MASS SUB" && armedSide === "home"} />
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  <SQ label="IN /" sub="OUT" color="green" onClick={cb.homeInOut} armed={armedFn === "IN/OUT" && armedSide === "home"} />
+                  <SQ label="DBL" sub="BONUS" color="green" onClick={cb.homeDblBonus} active={state.doubleBonus === "home"} />
+                </div>
+
               </Panel>
             </div>
 
