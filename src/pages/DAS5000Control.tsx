@@ -244,7 +244,56 @@ export default function DAS5000Control() {
       case "S": update({ strikes: state.strikes >= 2 ? 0 : state.strikes + 1 }); break;
       case "O": update({ outs: state.outs >= 2 ? 0 : state.outs + 1 }); break;
       case "INNING": update(p => ({ inningHalf: p.inningHalf === "T" ? "B" : "T", inning: p.inningHalf === "B" ? p.inning + 1 : p.inning })); break;
-    }
+      case "PLR FOUL": {
+        // Format: <player> then second ENTER (any digits) = foul count delta (+1 default)
+        // Single ENTER with just player number = +1 foul to that player
+        if (side && pendingDigits) {
+          const parts = pendingDigits.split(" ").filter(Boolean);
+          const num = parts[0];
+          const fouls = parts[1] ? parseInt(parts[1], 10) : null;
+          const listKey = side === "home" ? "homePlayers" : "guestPlayers";
+          update(p => {
+            const list = [...p[listKey]];
+            const idx = list.findIndex(pl => pl.number === num);
+            if (idx >= 0) list[idx] = { ...list[idx], fouls: fouls ?? list[idx].fouls + 1, inGame: true };
+            else list.push({ number: num, fouls: fouls ?? 1, points: 0, inGame: true });
+            // also bump team fouls if it was an add
+            const teamKey = side === "home" ? "homeFouls" : "guestFouls";
+            return { [listKey]: list, [teamKey]: (p as any)[teamKey] + 1 } as any;
+          });
+        }
+        break;
+      }
+      case "MASS SUB": {
+        // Comma/space separated player numbers — mark all as in-game, others out
+        if (side && pendingDigits) {
+          const nums = pendingDigits.split(/[\s,]+/).filter(Boolean);
+          const listKey = side === "home" ? "homePlayers" : "guestPlayers";
+          update(p => {
+            const existing = new Map(p[listKey].map(pl => [pl.number, pl]));
+            const result = nums.map(n => existing.get(n) ?? { number: n, fouls: 0, points: 0, inGame: true });
+            // include benched players too (preserved, marked out)
+            for (const pl of p[listKey]) if (!nums.includes(pl.number)) result.push({ ...pl, inGame: false });
+            return { [listKey]: result } as any;
+          });
+        }
+        break;
+      }
+      case "IN/OUT": {
+        if (side && pendingDigits) {
+          const num = pendingDigits.trim();
+          const listKey = side === "home" ? "homePlayers" : "guestPlayers";
+          update(p => {
+            const list = [...p[listKey]];
+            const idx = list.findIndex(pl => pl.number === num);
+            if (idx >= 0) list[idx] = { ...list[idx], inGame: !list[idx].inGame };
+            else list.push({ number: num, fouls: 0, points: 0, inGame: true });
+            return { [listKey]: list } as any;
+          });
+        }
+        break;
+      }
+
     setStatus("OK");
     setArmedFn(null); setArmedSide(null); setPendingDigits("");
     setTimeout(() => setStatus("READY"), 600);
