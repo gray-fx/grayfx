@@ -75,6 +75,13 @@ const Index = () => {
               <span>Availability</span>
               <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
             </a>
+            <a
+              href="#/payments"
+              className="group inline-flex items-center gap-2 rounded-sm border border-border bg-secondary/50 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-foreground transition-all hover:border-primary hover:text-primary"
+            >
+              <span>Payment Options</span>
+              <ExternalLink className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </a>
           </motion.div>
 
           <motion.div
