@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key, ImageIcon } from "lucide-react";
+import { ArrowLeft, CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key, ImageIcon, CreditCard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import AdminAnnouncementsTab from "@/components/admin/AdminAnnouncementsTab";
 import AdminMaintenanceTab from "@/components/admin/AdminMaintenanceTab";
 import AdminCredentialsTab from "@/components/admin/AdminCredentialsTab";
 import AdminPhotosTab from "@/components/admin/AdminPhotosTab";
+import AdminPaymentsTab from "@/components/admin/AdminPaymentsTab";
 
 const AdminPanel = () => {
   const { toast } = useToast();
@@ -128,7 +129,7 @@ const AdminPanel = () => {
         </motion.div>
 
         <Tabs defaultValue="calendar" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-8">
+          <TabsList className="grid w-full grid-cols-6 mb-8">
             <TabsTrigger value="calendar" className="gap-1.5 text-xs">
               <CalendarDays className="h-4 w-4" />
               <span className="hidden sm:inline">Calendar</span>
@@ -140,6 +141,10 @@ const AdminPanel = () => {
             <TabsTrigger value="announcements" className="gap-1.5 text-xs">
               <Megaphone className="h-4 w-4" />
               <span className="hidden sm:inline">Announce</span>
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="gap-1.5 text-xs">
+              <CreditCard className="h-4 w-4" />
+              <span className="hidden sm:inline">Payments</span>
             </TabsTrigger>
             <TabsTrigger value="maintenance" className="gap-1.5 text-xs">
               <Shield className="h-4 w-4" />
@@ -159,6 +164,9 @@ const AdminPanel = () => {
           </TabsContent>
           <TabsContent value="announcements">
             <AdminAnnouncementsTab />
+          </TabsContent>
+          <TabsContent value="payments">
+            <AdminPaymentsTab />
           </TabsContent>
           <TabsContent value="maintenance">
             <AdminMaintenanceTab />
