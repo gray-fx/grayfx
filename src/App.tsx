@@ -17,7 +17,6 @@ import AthleteFinder from "./pages/AthleteFinder";
 import DAS5000Control from "./pages/DAS5000Control";
 import DAS5000Display from "./pages/DAS5000Display";
 import Payments from "./pages/Payments";
-import GamesLobby from "./pages/GamesLobby";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,11 +34,6 @@ const App = () => (
           <Route path="/unfollow" element={<UnfollowFinder />} />
           <Route path="/scoreboard-control" element={<ScoreboardControl />} />
           <Route path="/scoreboard" element={<ScoreboardDisplay />} />
-          <Route path="/games" element={<GamesLobby />} />
-          <Route path="/g/:code" element={<ScoreboardDisplay />} />
-          <Route path="/g/:code/control" element={<ScoreboardControl />} />
-          <Route path="/d/:code" element={<DAS5000Display />} />
-          <Route path="/d/:code/control" element={<DAS5000Control />} />
           <Route path="/book" element={<Booking />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/downloads" element={<Downloads />} />
