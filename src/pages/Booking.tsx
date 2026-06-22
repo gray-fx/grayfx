@@ -22,6 +22,7 @@ const EVENT_TYPES = [
   "Concert / Festival",
   "Car Meet / Car Show",
   "Content Creation",
+  "Graphic Design",
   "Other",
 ];
 
