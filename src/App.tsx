@@ -42,6 +42,7 @@ const App = () => (
           <Route path="/das5000-control" element={<DAS5000Control />} />
           <Route path="/das5000" element={<DAS5000Display />} />
           <Route path="/payments" element={<Payments />} />
+          <Route path="/thank-you" element={<ThankYou />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
