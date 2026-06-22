@@ -149,6 +149,39 @@ export type Database = {
         }
         Relationships: []
       }
+      games: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          pin: string
+          state: Json
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          kind: string
+          name?: string
+          pin?: string
+          state?: Json
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          pin?: string
+          state?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           created_at: string
