@@ -17,6 +17,7 @@ import AthleteFinder from "./pages/AthleteFinder";
 import DAS5000Control from "./pages/DAS5000Control";
 import DAS5000Display from "./pages/DAS5000Display";
 import Payments from "./pages/Payments";
+import ThankYou from "./pages/ThankYou";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
