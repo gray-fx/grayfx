@@ -137,15 +137,15 @@ const Index = () => {
 
           <ScrollSection delay={0.2}>
             <p className="mt-8 font-body text-lg leading-relaxed text-muted-foreground">
-              Based in Newark, Delaware, I capture the extraordinary in everyday moments. 
-              While I specialize in sports photography, my work also spans 
-              landscapes, nature, and portraits.
+              Hey, I'm Grayson — a photographer (and graphic designer) based in Newark, Delaware.
+              I mostly shoot sports, but I'm always down to capture pretty much anything: portraits,
+              events, landscapes, cars, you name it.
             </p>
             <p className="mt-6 font-body text-lg leading-relaxed text-muted-foreground">
-              My approach blends technical skill with a passion for storytelling, 
-              ensuring every shot tells a unique story. Whether it’s the intensity 
-              of a game, the serenity of a landscape, or the personality in a portrait, 
-              I aim to create images that resonate and leave a lasting impression.
+              I love what I do, and I try to make every shoot feel laid back and fun while still
+              walking away with photos you'll actually want to share. On the design side, I also put
+              together logos, posters, social graphics, and edits — basically whatever you need to
+              look good online or in print. If you've got an idea, let's make it happen.
             </p>
           </ScrollSection>
 

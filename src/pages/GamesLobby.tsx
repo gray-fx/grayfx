@@ -56,7 +56,7 @@ export default function GamesLobby() {
         kind,
         name: name.trim() || (kind === "classic" ? "Scoreboard" : "DAS5000"),
         pin: pin.trim(),
-        initialState: initial,
+        state: initial,
       });
       setName(""); setPin("");
       await refresh();
