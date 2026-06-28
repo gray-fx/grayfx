@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getGameByCode, subscribeGameByCode, updateGameStateByCode, makeThrottledWriter } from "@/lib/game-sync";
 
 export type DSport = "basketball" | "football" | "hockey" | "soccer" | "baseball" | "volleyball" | "wrestling";
 
@@ -120,8 +121,11 @@ export function formatClock(ms: number, tenthsUnder60 = true): string {
   return `${String(mm).padStart(1, "0")}:${String(ss).padStart(2, "0")}`;
 }
 
-export function useDAS5000(isController: boolean) {
+
+
+export function useDAS5000(isController: boolean, remoteCode?: string) {
   const [state, setState] = useState<DAS5000State>(() => {
+    if (remoteCode) return defaultState();
     try {
       const raw = localStorage.getItem(STORAGE);
       if (raw) return { ...defaultState(), ...JSON.parse(raw) };
@@ -131,20 +135,49 @@ export function useDAS5000(isController: boolean) {
   const channelRef = useRef<BroadcastChannel | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTickRef = useRef<number>(0);
+  const remoteWriterRef = useRef<((s: DAS5000State) => void) | null>(null);
 
+  // Local channel (same device)
   useEffect(() => {
+    if (remoteCode) return;
     const ch = new BroadcastChannel(CHANNEL);
     channelRef.current = ch;
     if (!isController) {
       ch.onmessage = (e) => setState(e.data);
     }
     return () => ch.close();
-  }, [isController]);
+  }, [isController, remoteCode]);
+
+  // Remote sync
+  useEffect(() => {
+    if (!remoteCode) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const row = await getGameByCode(remoteCode);
+        if (!cancelled && row?.state) setState({ ...defaultState(), ...row.state });
+      } catch (e) { console.error("game fetch failed", e); }
+    })();
+    const unsub = subscribeGameByCode(remoteCode, (s) => {
+      if (!isController) setState({ ...defaultState(), ...s });
+    });
+    if (isController) {
+      remoteWriterRef.current = makeThrottledWriter<DAS5000State>(
+        (s) => updateGameStateByCode(remoteCode, s),
+        300,
+      );
+    }
+    return () => { cancelled = true; unsub(); remoteWriterRef.current = null; };
+  }, [remoteCode, isController]);
 
   const broadcast = useCallback((s: DAS5000State) => {
-    localStorage.setItem(STORAGE, JSON.stringify(s));
-    channelRef.current?.postMessage(s);
-  }, []);
+    if (remoteCode) {
+      if (isController) remoteWriterRef.current?.(s);
+    } else {
+      localStorage.setItem(STORAGE, JSON.stringify(s));
+      channelRef.current?.postMessage(s);
+    }
+  }, [remoteCode, isController]);
 
   const update = useCallback((patch: Partial<DAS5000State> | ((p: DAS5000State) => Partial<DAS5000State>)) => {
     setState(prev => {
@@ -155,9 +188,9 @@ export function useDAS5000(isController: boolean) {
     });
   }, [broadcast]);
 
+  // Clock loop — runs on controller AND display (display extrapolates locally between snapshots for smooth OBS)
   useEffect(() => {
     if (tickRef.current) clearInterval(tickRef.current);
-    if (!isController) return;
     if (!state.clockRunning && !state.shotClockRunning && state.homePenaltyMs <= 0 && state.guestPenaltyMs <= 0) return;
     lastTickRef.current = performance.now();
     tickRef.current = setInterval(() => {
@@ -183,7 +216,7 @@ export function useDAS5000(isController: boolean) {
         }
         if (prev.homePenaltyMs > 0) next.homePenaltyMs = Math.max(0, prev.homePenaltyMs - dt);
         if (prev.guestPenaltyMs > 0) next.guestPenaltyMs = Math.max(0, prev.guestPenaltyMs - dt);
-        broadcast(next);
+        if (isController) broadcast(next);
         return next;
       });
     }, 100);
@@ -192,3 +225,4 @@ export function useDAS5000(isController: boolean) {
 
   return { state, update };
 }
+

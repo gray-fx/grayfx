@@ -1,6 +1,7 @@
 import { useDAS5000, formatClock } from "@/hooks/use-das5000";
 import { SegText } from "@/components/das5000/SevenSeg";
 import { useMemo } from "react";
+import { useParams } from "react-router-dom";
 
 /**
  * Daktronics Basketball Scoreboard — faithful reproduction of the
@@ -85,7 +86,8 @@ function Label({
 }
 
 export default function DAS5000Display() {
-  const { state } = useDAS5000(false);
+  const { code } = useParams();
+  const { state } = useDAS5000(false, code);
 
   const clockText = useMemo(
     () => formatClock(state.clockMs, state.showTenthsUnder60),

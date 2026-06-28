@@ -1,6 +1,6 @@
 import { useDAS5000, formatClock, DSport } from "@/hooks/use-das5000";
 import { useEffect, useState, useCallback, memo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
 
 type Side = "home" | "guest";
@@ -199,7 +199,8 @@ function pad3(n: number) { return String(n).padStart(3, " "); }
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function DAS5000Control() {
-  const { state, update } = useDAS5000(true);
+  const { code } = useParams();
+  const { state, update } = useDAS5000(true, code);
   const [pendingDigits, setPendingDigits] = useState("");
   const [armedFn, setArmedFn] = useState<string | null>(null);
   const [armedSide, setArmedSide] = useState<Side | null>(null);

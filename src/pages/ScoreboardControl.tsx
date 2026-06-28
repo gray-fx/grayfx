@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Minus, Play, Pause, RotateCcw, ArrowLeft, ExternalLink, Trash2, Flag, AlertTriangle, Hand } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 const SPORT_ACTIONS: Record<SportType, string[]> = {
   football: ["Touchdown", "Field Goal", "Extra Point", "2PT Conversion", "Safety", "Interception", "Fumble", "Sack", "Tackle", "Pass Complete", "Rush", "Penalty", "Punt", "Kickoff"],
@@ -20,7 +20,8 @@ const SPORT_ACTIONS: Record<SportType, string[]> = {
 };
 
 const ScoreboardControl = () => {
-  const { state, update } = useScoreboard(true);
+  const { code } = useParams();
+  const { state, update } = useScoreboard(true, code);
   const config = SPORT_CONFIG[state.sport];
 
   const [statTeam, setStatTeam] = useState<"home" | "away">("home");

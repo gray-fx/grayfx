@@ -80,6 +80,28 @@ export async function updateGameState(id: string, state: any): Promise<void> {
   if (error) throw error;
 }
 
+export async function updateGameStateByCode(code: string, state: any): Promise<void> {
+  const { error } = await supabase
+    .from("games")
+    .update({ state, updated_at: new Date().toISOString() })
+    .eq("code", code.toUpperCase());
+  if (error) throw error;
+}
+
+export function subscribeGameByCode(code: string, onState: (state: any) => void) {
+  const channel = supabase
+    .channel(`game-${code}`)
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "games", filter: `code=eq.${code.toUpperCase()}` },
+      (payload: any) => {
+        if (payload?.new?.state) onState(payload.new.state);
+      },
+    )
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
 /** Throttled writer: batches rapid updates into a single call per `intervalMs`. */
 export function makeThrottledWriter<T>(
   write: (value: T) => Promise<void> | void,
