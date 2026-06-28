@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getGameByCode, subscribeGameByCode, updateGameStateByCode, makeThrottledWriter } from "@/lib/game-sync";
 
 export type SportType = "football" | "basketball" | "baseball" | "hockey" | "soccer";
 
@@ -214,7 +215,7 @@ function migrate(s: any): ScoreboardState {
   return merged;
 }
 
-import { getGameByCode, subscribeGameByCode, updateGameStateByCode, makeThrottledWriter } from "@/lib/game-sync";
+
 
 export function useScoreboard(isController: boolean, remoteCode?: string) {
   const [state, setState] = useState<ScoreboardState>(() => {

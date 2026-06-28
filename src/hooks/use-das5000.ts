@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getGameByCode, subscribeGameByCode, updateGameStateByCode, makeThrottledWriter } from "@/lib/game-sync";
 
 export type DSport = "basketball" | "football" | "hockey" | "soccer" | "baseball" | "volleyball" | "wrestling";
 
@@ -120,7 +121,7 @@ export function formatClock(ms: number, tenthsUnder60 = true): string {
   return `${String(mm).padStart(1, "0")}:${String(ss).padStart(2, "0")}`;
 }
 
-import { getGameByCode, subscribeGameByCode, updateGameStateByCode, makeThrottledWriter } from "@/lib/game-sync";
+
 
 export function useDAS5000(isController: boolean, remoteCode?: string) {
   const [state, setState] = useState<DAS5000State>(() => {
