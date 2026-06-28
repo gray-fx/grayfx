@@ -18,6 +18,7 @@ import DAS5000Control from "./pages/DAS5000Control";
 import DAS5000Display from "./pages/DAS5000Display";
 import Payments from "./pages/Payments";
 import ThankYou from "./pages/ThankYou";
+import GamesLobby from "./pages/GamesLobby";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,11 @@ const App = () => (
           <Route path="/das5000" element={<DAS5000Display />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/thank-you" element={<ThankYou />} />
+          <Route path="/games" element={<GamesLobby />} />
+          <Route path="/g/:code" element={<ScoreboardDisplay />} />
+          <Route path="/g/:code/control" element={<ScoreboardControl />} />
+          <Route path="/d/:code" element={<DAS5000Display />} />
+          <Route path="/d/:code/control" element={<DAS5000Control />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
