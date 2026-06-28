@@ -1,9 +1,11 @@
 import { useScoreboard, SPORT_CONFIG, formatClock } from "@/hooks/use-scoreboard";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flag, AlertTriangle, Hand } from "lucide-react";
+import { useParams } from "react-router-dom";
 
 const ScoreboardDisplay = () => {
-  const { state } = useScoreboard(false);
+  const { code } = useParams();
+  const { state } = useScoreboard(false, code);
   const config = SPORT_CONFIG[state.sport];
   const d = state.display;
   const clockText = formatClock(state.clockMs, d);
