@@ -214,8 +214,11 @@ function migrate(s: any): ScoreboardState {
   return merged;
 }
 
-export function useScoreboard(isController: boolean) {
+import { getGameByCode, subscribeGameByCode, updateGameStateByCode, makeThrottledWriter } from "@/lib/game-sync";
+
+export function useScoreboard(isController: boolean, remoteCode?: string) {
   const [state, setState] = useState<ScoreboardState>(() => {
+    if (remoteCode) return getDefaultState();
     const saved = localStorage.getItem("scoreboard-state");
     if (saved) {
       try { return migrate(JSON.parse(saved)); } catch { /* ignore */ }
@@ -226,30 +229,55 @@ export function useScoreboard(isController: boolean) {
   const channelRef = useRef<BroadcastChannel | null>(null);
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTickRef = useRef<number>(0);
+  const remoteWriterRef = useRef<((s: ScoreboardState) => void) | null>(null);
 
+  // Local broadcast (same-device tabs)
   useEffect(() => {
+    if (remoteCode) return;
     channelRef.current = new BroadcastChannel(CHANNEL_NAME);
     if (!isController) {
-      channelRef.current.onmessage = (e) => {
-        setState(migrate(e.data));
-      };
+      channelRef.current.onmessage = (e) => setState(migrate(e.data));
     }
     return () => { channelRef.current?.close(); };
-  }, [isController]);
+  }, [isController, remoteCode]);
+
+  // Remote sync (cross-device via Supabase realtime)
+  useEffect(() => {
+    if (!remoteCode) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const row = await getGameByCode(remoteCode);
+        if (!cancelled && row?.state) setState(migrate(row.state));
+      } catch (e) { console.error("game fetch failed", e); }
+    })();
+    const unsub = subscribeGameByCode(remoteCode, (s) => {
+      if (!isController) setState(migrate(s));
+    });
+    if (isController) {
+      remoteWriterRef.current = makeThrottledWriter<ScoreboardState>(
+        (s) => updateGameStateByCode(remoteCode, s),
+        300,
+      );
+    }
+    return () => { cancelled = true; unsub(); remoteWriterRef.current = null; };
+  }, [remoteCode, isController]);
 
   const broadcast = useCallback((newState: ScoreboardState) => {
-    localStorage.setItem("scoreboard-state", JSON.stringify(newState));
-    channelRef.current?.postMessage(newState);
-  }, []);
+    if (remoteCode) {
+      if (isController) remoteWriterRef.current?.(newState);
+    } else {
+      localStorage.setItem("scoreboard-state", JSON.stringify(newState));
+      channelRef.current?.postMessage(newState);
+    }
+  }, [remoteCode, isController]);
 
   const update = useCallback((partial: Partial<ScoreboardState>) => {
     setState((prev) => {
       const next = { ...prev, ...partial } as ScoreboardState;
-      // If clock string was edited, recompute ms
       if (partial.clock !== undefined && partial.clockMs === undefined) {
         next.clockMs = parseClockToMs(partial.clock);
       }
-      // If ms was edited, recompute string
       if (partial.clockMs !== undefined && partial.clock === undefined) {
         next.clock = formatClock(next.clockMs, next.display);
       }
@@ -258,10 +286,10 @@ export function useScoreboard(isController: boolean) {
     });
   }, [broadcast]);
 
-  // High-precision clock loop (100ms tick)
+  // High-precision clock loop — runs on controller AND display (display extrapolates between snapshots for smooth OBS)
   useEffect(() => {
     if (clockRef.current) clearInterval(clockRef.current);
-    if (!state.clockRunning || !isController) return;
+    if (!state.clockRunning) return;
     const isSoccer = state.sport === "soccer";
     lastTickRef.current = performance.now();
 
@@ -275,11 +303,11 @@ export function useScoreboard(isController: boolean) {
         if (!isSoccer && newMs <= 0) {
           newMs = 0;
           const stopped = { ...prev, clockMs: 0, clock: formatClock(0, prev.display), clockRunning: false };
-          broadcast(stopped);
+          if (isController) broadcast(stopped);
           return stopped;
         }
         const next = { ...prev, clockMs: newMs, clock: formatClock(newMs, prev.display) };
-        broadcast(next);
+        if (isController) broadcast(next);
         return next;
       });
     }, 100);
@@ -289,3 +317,4 @@ export function useScoreboard(isController: boolean) {
 
   return { state, update };
 }
+
