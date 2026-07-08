@@ -6,7 +6,12 @@ function parseFollowing(json: any): string[] {
   const usernames: string[] = [];
   const list = json?.relationships_following || [];
   for (const item of list) {
-    if (item.title) usernames.push(item.title.toLowerCase());
+    const data = item?.string_list_data;
+    if (Array.isArray(data)) {
+      for (const entry of data) {
+        if (entry.value) usernames.push(entry.value.toLowerCase());
+      }
+    }
   }
   return usernames;
 }
