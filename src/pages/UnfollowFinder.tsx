@@ -2,16 +2,37 @@ import { useState, useCallback } from "react";
 
 type UserEntry = { username: string };
 
+// Instagram export formats are inconsistent between following.json and
+// followers_*.json: following.json usually stores the username in `title`
+// with only `href`/`timestamp` in string_list_data, while followers files
+// store it in `string_list_data[].value`. This extracts it from whichever
+// field is actually populated.
+function extractUsername(item: any): string | null {
+  const data = item?.string_list_data;
+  if (Array.isArray(data)) {
+    for (const entry of data) {
+      if (entry?.value) return entry.value.toLowerCase();
+      if (entry?.href) {
+        try {
+          const path = new URL(entry.href).pathname;
+          const segment = path.split("/").filter(Boolean).pop();
+          if (segment) return segment.toLowerCase();
+        } catch {
+          // ignore malformed URLs
+        }
+      }
+    }
+  }
+  if (item?.title) return item.title.toLowerCase();
+  return null;
+}
+
 function parseFollowing(json: any): string[] {
   const usernames: string[] = [];
   const list = json?.relationships_following || [];
   for (const item of list) {
-    const data = item?.string_list_data;
-    if (Array.isArray(data)) {
-      for (const entry of data) {
-        if (entry.value) usernames.push(entry.value.toLowerCase());
-      }
-    }
+    const username = extractUsername(item);
+    if (username) usernames.push(username);
   }
   return usernames;
 }
@@ -20,12 +41,8 @@ function parseFollowers(json: any): string[] {
   const usernames: string[] = [];
   const list = Array.isArray(json) ? json : [];
   for (const item of list) {
-    const data = item?.string_list_data;
-    if (Array.isArray(data)) {
-      for (const entry of data) {
-        if (entry.value) usernames.push(entry.value.toLowerCase());
-      }
-    }
+    const username = extractUsername(item);
+    if (username) usernames.push(username);
   }
   return usernames;
 }
