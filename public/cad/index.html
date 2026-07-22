@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Delaware Coastal Roleplay | CAD Login</title>
+    <meta name="description" content="Delaware Coastal Roleplay — Sonoran CAD login portal." />
+    <link rel="icon" href="/cad/logo.png" type="image/png" />
+    <meta property="og:title" content="Delaware Coastal Roleplay | CAD" />
+    <meta property="og:description" content="Login to the Delaware Coastal Roleplay CAD." />
+    <meta property="og:image" content="/cad/logo.png" />
+    <meta property="og:type" content="website" />
+    <style>
+      :root {
+        --navy-950: #050b17;
+        --navy-900: #0a1628;
+        --navy-800: #0f2038;
+        --navy-700: #16304f;
+        --blue-400: #6ea3d6;
+        --blue-300: #9dc2e6;
+        --line: rgba(157, 194, 230, 0.18);
+        --text: #e8eef7;
+        --muted: #93a4bd;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: var(--navy-950);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+        overflow: hidden;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background:
+          radial-gradient(1200px 800px at 15% 20%, rgba(110, 163, 214, 0.18), transparent 60%),
+          radial-gradient(900px 700px at 85% 90%, rgba(22, 48, 79, 0.55), transparent 65%),
+          linear-gradient(180deg, var(--navy-950) 0%, var(--navy-900) 100%);
+        z-index: 0;
+      }
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(110, 163, 214, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(110, 163, 214, 0.05) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+        -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+        z-index: 0;
+        pointer-events: none;
+      }
+      .wrap {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        height: 100%;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 28px;
+        border-bottom: 1px solid var(--line);
+        backdrop-filter: blur(8px);
+        background: rgba(5, 11, 23, 0.55);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .brand img {
+        height: 52px;
+        width: auto;
+        filter: drop-shadow(0 4px 20px rgba(110, 163, 214, 0.35));
+      }
+      .brand-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.1;
+      }
+      .brand-text .title {
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-size: 15px;
+        color: #fff;
+      }
+      .brand-text .sub {
+        font-size: 11px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: var(--blue-400);
+        margin-top: 4px;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--blue-300);
+        background: rgba(15, 32, 56, 0.5);
+      }
+      .status .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #4ade80;
+        box-shadow: 0 0 10px #4ade80;
+      }
+
+      main {
+        position: relative;
+        padding: 20px 28px;
+        min-height: 0;
+      }
+      .frame-shell {
+        position: relative;
+        height: 100%;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        overflow: hidden;
+        background: rgba(5, 11, 23, 0.6);
+        box-shadow:
+          0 30px 80px -30px rgba(0, 0, 0, 0.8),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+      }
+      .frame-shell iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #0b1220;
+      }
+      .loader {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        color: var(--muted);
+        pointer-events: none;
+        transition: opacity 500ms ease;
+      }
+      .loader.hidden { opacity: 0; }
+      .spinner {
+        width: 32px;
+        height: 32px;
+        border: 2px solid rgba(157, 194, 230, 0.2);
+        border-top-color: var(--blue-300);
+        border-radius: 50%;
+        animation: spin 900ms linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 28px 18px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+      }
+      footer a {
+        color: var(--blue-300);
+        text-decoration: none;
+      }
+      footer a:hover { color: #fff; }
+
+      @media (max-width: 720px) {
+        header { padding: 14px 16px; }
+        main { padding: 12px 12px; }
+        footer { padding: 10px 16px 14px; flex-direction: column; gap: 6px; }
+        .brand img { height: 40px; }
+        .brand-text .title { font-size: 13px; }
+        .brand-text .sub { font-size: 10px; }
+        .status { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="brand">
+          <img src="/cad/logo.png" alt="Delaware Coastal Roleplay" />
+          <div class="brand-text">
+            <span class="title">Delaware Coastal Roleplay</span>
+            <span class="sub">Computer Aided Dispatch</span>
+          </div>
+        </div>
+        <div class="status">
+          <span class="dot"></span>
+          <span>CAD Online</span>
+        </div>
+      </header>
+
+      <main>
+        <div class="frame-shell">
+          <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <div>Loading Sonoran CAD…</div>
+          </div>
+          <iframe
+            id="cad"
+            src="https://sonorancad.com/#/?comid=YOUR_COMMUNITY_ID_HERE"
+            title="Sonoran CAD"
+            allow="clipboard-read; clipboard-write; microphone; camera; fullscreen"
+            referrerpolicy="no-referrer-when-downgrade"
+            onload="document.getElementById('loader').classList.add('hidden')"
+          ></iframe>
+        </div>
+      </main>
+
+      <footer>
+        <span>© Delaware Coastal Roleplay</span>
+        <span>Powered by <a href="https://sonorancad.com" target="_blank" rel="noopener">Sonoran CAD</a></span>
+      </footer>
+    </div>
+  </body>
+</html>
