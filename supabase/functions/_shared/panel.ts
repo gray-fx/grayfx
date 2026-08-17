@@ -34,14 +34,9 @@ export async function getCallerDiscordId(
     return { error: json({ error: "Invalid session" }, 401) };
   }
 
-  const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
-  const identity = (data.user.identities ?? []).find(
-    (i: { provider: string }) => i.provider === "discord",
-  );
-  const discordUserId =
-    (identity?.id as string | undefined) ??
-    (meta.provider_id as string | undefined) ??
-    (meta.sub as string | undefined);
+  // Only trust server-set app_metadata (written by the discord-auth function).
+  const appMeta = (data.user.app_metadata ?? {}) as Record<string, unknown>;
+  const discordUserId = appMeta.discord_id as string | undefined;
 
   if (!discordUserId) {
     return { error: json({ error: "No linked Discord account" }, 403) };
