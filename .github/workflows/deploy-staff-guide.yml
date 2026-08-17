@@ -1,0 +1,29 @@
+name: Deploy Staff Guide
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "supabase/functions/staff-guide/**"
+      - "supabase/functions/_shared/**"
+      - ".github/workflows/deploy-staff-guide.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_ID: xgezfkrayeucrstftekp
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy staff-guide
+        run: supabase functions deploy staff-guide --project-ref $PROJECT_ID --use-api
