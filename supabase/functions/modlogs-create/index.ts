@@ -25,15 +25,13 @@ Deno.serve(async (req) => {
   }
 
   const type = String(body.type ?? "");
-  const targetTag = String(body.targetTag ?? "").trim();
-  const targetId = body.targetId ? String(body.targetId).trim() : "";
+  const robloxUsername = String(body.robloxUsername ?? "").trim();
   const reason = String(body.reason ?? "").trim();
   const runInGame = Boolean(body.runInGame);
 
   const errors: string[] = [];
   if (!TYPES.includes(type)) errors.push("Case type must be warn, kick, ban or timeout");
-  if (targetTag.length < 2 || targetTag.length > 64) errors.push("Target Discord tag is required");
-  if (targetId && !/^[0-9]{5,25}$/.test(targetId)) errors.push("Target Discord ID must be numeric");
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(robloxUsername)) errors.push("Roblox username must be 3-20 characters (letters, numbers, underscores)");
   if (reason.length < 3 || reason.length > 1000) errors.push("Reason must be 3-1000 characters");
   if (errors.length) return json({ error: errors.join(". ") }, 400);
 
@@ -46,8 +44,7 @@ Deno.serve(async (req) => {
       guildId: env.guildId,
       discordUserId: caller.discordUserId,
       type,
-      targetId: targetId || null,
-      targetTag,
+      robloxUsername,
       reason,
       runInGame,
     },
