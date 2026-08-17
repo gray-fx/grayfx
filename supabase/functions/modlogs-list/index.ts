@@ -17,15 +17,15 @@ Deno.serve(async (req) => {
   if ("error" in env) return env.error;
 
   const url = new URL(req.url);
-  const targetId = url.searchParams.get("targetId") ?? undefined;
+  const robloxUsername = url.searchParams.get("robloxUsername") ?? undefined;
   const type = url.searchParams.get("type") ?? undefined;
   const limit = url.searchParams.get("limit") ?? "50";
 
   if (type && !TYPES.includes(type)) {
     return json({ error: "Invalid case type" }, 400);
   }
-  if (targetId && !/^[0-9]{5,25}$/.test(targetId)) {
-    return json({ error: "Invalid target Discord ID" }, 400);
+  if (robloxUsername && !/^[A-Za-z0-9_]{3,20}$/.test(robloxUsername)) {
+    return json({ error: "Invalid Roblox username" }, 400);
   }
   const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
 
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     query: {
       guildId: env.guildId,
       discordUserId: caller.discordUserId,
-      targetId,
+      robloxUsername,
       type,
       limit: String(parsedLimit),
     },
