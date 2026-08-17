@@ -20,6 +20,11 @@ import Payments from "./pages/Payments";
 import ThankYou from "./pages/ThankYou";
 import GamesLobby from "./pages/GamesLobby";
 import NotFound from "./pages/NotFound";
+import DiscordOAuthHandler from "./components/panel/DiscordOAuthHandler";
+import PanelLogin from "./pages/panel/PanelLogin";
+import PanelDashboard from "./pages/panel/PanelDashboard";
+import PanelModLogs from "./pages/panel/PanelModLogs";
+import PanelCommand from "./pages/panel/PanelCommand";
 
 const queryClient = new QueryClient();
 
@@ -29,8 +34,13 @@ const App = () => (
       <Toaster />
       <Sonner />
       <HashRouter>
+        <DiscordOAuthHandler />
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/panel/login" element={<PanelLogin />} />
+          <Route path="/panel" element={<PanelDashboard />} />
+          <Route path="/panel/logs" element={<PanelModLogs />} />
+          <Route path="/panel/command" element={<PanelCommand />} />
           <Route path="/availability" element={<Availability />} />
           <Route path="/admin/panel" element={<AdminPanel />} />
           <Route path="/unfollow" element={<UnfollowFinder />} />
