@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ScrollText, Terminal, LogOut, Loader2, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, LogOut, Loader2, ShieldAlert } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { callPanel, panelUserFromSession, type PanelUser } from "@/lib/panel-api";
@@ -9,8 +9,6 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/panel", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/panel/logs", label: "Mod Logs", icon: ScrollText, end: false },
-  { to: "/panel/command", label: "Run Command", icon: Terminal, end: false },
 ];
 
 type Props = { children: React.ReactNode; title: string };
@@ -92,7 +90,7 @@ const PanelLayout = ({ children, title }: Props) => {
       <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
         <div className="px-5 py-6 border-b border-border">
           <p className="font-display text-lg font-bold tracking-tight">Mod Panel</p>
-          <p className="font-body text-xs text-muted-foreground mt-1">Discord moderation</p>
+          <p className="font-body text-xs text-muted-foreground mt-1">ER:LC moderation</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {NAV.map(({ to, label, icon: Icon, end }) => (
