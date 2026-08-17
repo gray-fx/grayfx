@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Loader2, RefreshCw, Pencil, Save, Upload, X } from "lucide-react";
+import { BookOpen, Loader2, RefreshCw, Pencil, Save, Upload, X, Lock } from "lucide-react";
 import mammoth from "mammoth";
 import PanelLayout from "./PanelLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +19,6 @@ function slugify(text: string, seen: Set<string>) {
   return id;
 }
 
-/** Walks the rendered HTML and stamps ids on H1/H2 so "jump to section" works. */
 function buildSections(container: HTMLElement): Section[] {
   const seen = new Set<string>();
   const nodes = Array.from(container.querySelectorAll("h1, h2"));
@@ -40,14 +39,17 @@ const PanelStaffGuide = () => {
   const [updatedByTag, setUpdatedByTag] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string>("");
-  const [canEdit, setCanEdit] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [draftHtml, setDraftHtml] = useState("");
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("guide_unlocked") === "1");
+  const [pwPrompt, setPwPrompt] = useState(false);
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,14 +64,6 @@ const PanelStaffGuide = () => {
       setHtml(data?.content_html ?? "");
       setUpdatedAt(data?.updated_at ?? null);
       setUpdatedByTag(data?.updated_by_tag ?? null);
-
-      // Try an UPDATE with no real change to probe whether RLS allows it
-      // for this user, i.e. whether they're staff. Harmless no-op write.
-      const { error: probeErr } = await supabase
-        .from("staff_guide")
-        .update({ content_html: data?.content_html ?? "" })
-        .eq("id", 1);
-      setCanEdit(!probeErr);
     } catch (e) {
       toast({ title: "Could not load the staff guide", description: (e as Error).message, variant: "destructive" });
     } finally {
@@ -100,9 +94,46 @@ const PanelStaffGuide = () => {
   );
 
   const startEditing = () => {
-    setDraftHtml(html);
     setEditing(true);
     setTimeout(() => { if (editorRef.current) editorRef.current.innerHTML = html; }, 0);
+  };
+
+  const requestEdit = () => {
+    if (unlocked) { startEditing(); return; }
+    setPwInput("");
+    setPwError("");
+    setPwPrompt(true);
+  };
+
+  const submitPassword = async () => {
+    const { data, error } = await supabase.rpc("verify_guide_password", { pw: pwInput });
+    if (error || !data) {
+      setPwError("Incorrect password.");
+      return;
+    }
+    sessionStorage.setItem("guide_unlocked", "1");
+    setUnlocked(true);
+    setPwPrompt(false);
+    startEditing();
+  };
+
+  const lockGuide = () => {
+    sessionStorage.removeItem("guide_unlocked");
+    setUnlocked(false);
+    setEditing(false);
+  };
+
+  const changePassword = async () => {
+    const oldPw = window.prompt("Current password");
+    if (!oldPw) return;
+    const newPw = window.prompt("New password");
+    if (!newPw) return;
+    const { data, error } = await supabase.rpc("set_guide_password", { old_pw: oldPw, new_pw: newPw });
+    if (error || !data) {
+      toast({ title: "Wrong current password", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Password changed" });
   };
 
   const cancelEditing = () => setEditing(false);
@@ -115,7 +146,7 @@ const PanelStaffGuide = () => {
   const save = async () => {
     setSaving(true);
     try {
-      const content = editorRef.current?.innerHTML ?? draftHtml;
+      const content = editorRef.current?.innerHTML ?? "";
       const { data: userData } = await supabase.auth.getUser();
       const appMeta = (userData.user?.app_metadata ?? {}) as Record<string, any>;
 
@@ -149,7 +180,6 @@ const PanelStaffGuide = () => {
       if (editorRef.current) {
         editorRef.current.innerHTML = result.value;
       }
-      setDraftHtml(result.value);
       if (result.messages?.length) {
         console.warn("mammoth import warnings", result.messages);
       }
@@ -182,10 +212,15 @@ const PanelStaffGuide = () => {
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                     Refresh
                   </Button>
-                  {canEdit && (
-                    <Button size="sm" onClick={startEditing}>
-                      <Pencil className="h-4 w-4 mr-2" /> Edit
-                    </Button>
+                  <Button size="sm" onClick={requestEdit}>
+                    {unlocked ? <Pencil className="h-4 w-4 mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+                    Edit
+                  </Button>
+                  {unlocked && (
+                    <>
+                      <Button variant="ghost" size="sm" onClick={lockGuide}>Lock</Button>
+                      <Button variant="ghost" size="sm" onClick={changePassword}>Change password</Button>
+                    </>
                   )}
                 </>
               )}
@@ -286,11 +321,33 @@ const PanelStaffGuide = () => {
             />
           ) : (
             <p className="font-body text-sm text-muted-foreground text-center py-10">
-              {canEdit ? 'No staff guide content yet. Click "Edit" to write one or import a .docx.' : "No staff guide content yet."}
+              No staff guide content yet. Click "Edit" to write one or import a .docx.
             </p>
           )}
         </section>
       </div>
+
+      {pwPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-card border border-border rounded-lg p-6 w-full max-w-sm space-y-4">
+            <h3 className="font-display font-semibold">Enter guide password</h3>
+            <input
+              type="password"
+              autoFocus
+              value={pwInput}
+              onChange={(e) => setPwInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submitPassword()}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              placeholder="Password"
+            />
+            {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setPwPrompt(false)}>Cancel</Button>
+              <Button size="sm" onClick={submitPassword}>Unlock</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </PanelLayout>
   );
 };
