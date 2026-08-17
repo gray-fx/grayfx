@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import DiscordOAuthHandler from "./components/panel/DiscordOAuthHandler";
 import PanelLogin from "./pages/panel/PanelLogin";
 import PanelHome from "./pages/panel/PanelHome";
+import PanelStaffGuide from "./pages/panel/PanelStaffGuide";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/panel" element={<PanelHome />} />
           <Route path="/panel/logs" element={<PanelHome />} />
           <Route path="/panel/command" element={<PanelHome />} />
+          <Route path="/panel/staff-guide" element={<PanelStaffGuide />} />
           <Route path="/availability" element={<Availability />} />
           <Route path="/admin/panel" element={<AdminPanel />} />
           <Route path="/unfollow" element={<UnfollowFinder />} />
@@ -49,14 +51,10 @@ const App = () => (
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/athlete-finder" element={<AthleteFinder />} />
           <Route path="/das5000-control" element={<DAS5000Control />} />
-          <Route path="/das5000" element={<DAS5000Display />} />
+          <Route path="/das5000-display" element={<DAS5000Display />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/thank-you" element={<ThankYou />} />
           <Route path="/games" element={<GamesLobby />} />
-          <Route path="/g/:code" element={<ScoreboardDisplay />} />
-          <Route path="/g/:code/control" element={<ScoreboardControl />} />
-          <Route path="/d/:code" element={<DAS5000Display />} />
-          <Route path="/d/:code/control" element={<DAS5000Control />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
