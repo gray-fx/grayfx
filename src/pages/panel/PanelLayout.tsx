@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, LogOut, Loader2, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, LogOut, Loader2, ShieldAlert, BookOpen } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { callPanel, panelUserFromSession, type PanelUser } from "@/lib/panel-api";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/panel", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/panel/staff-guide", label: "Staff Guide", icon: BookOpen, end: true },
 ];
 
 type Props = { children: React.ReactNode; title: string };
