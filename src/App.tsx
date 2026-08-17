@@ -22,9 +22,7 @@ import GamesLobby from "./pages/GamesLobby";
 import NotFound from "./pages/NotFound";
 import DiscordOAuthHandler from "./components/panel/DiscordOAuthHandler";
 import PanelLogin from "./pages/panel/PanelLogin";
-import PanelDashboard from "./pages/panel/PanelDashboard";
-import PanelModLogs from "./pages/panel/PanelModLogs";
-import PanelCommand from "./pages/panel/PanelCommand";
+import PanelHome from "./pages/panel/PanelHome";
 
 const queryClient = new QueryClient();
 
@@ -38,9 +36,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/panel/login" element={<PanelLogin />} />
-          <Route path="/panel" element={<PanelDashboard />} />
-          <Route path="/panel/logs" element={<PanelModLogs />} />
-          <Route path="/panel/command" element={<PanelCommand />} />
+          <Route path="/panel" element={<PanelHome />} />
+          <Route path="/panel/logs" element={<PanelHome />} />
+          <Route path="/panel/command" element={<PanelHome />} />
           <Route path="/availability" element={<Availability />} />
           <Route path="/admin/panel" element={<AdminPanel />} />
           <Route path="/unfollow" element={<UnfollowFinder />} />
