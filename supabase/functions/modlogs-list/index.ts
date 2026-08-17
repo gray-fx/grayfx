@@ -6,7 +6,7 @@ import {
   panelEnv,
 } from "../_shared/panel.ts";
 
-const TYPES = ["warn", "kick", "ban", "timeout"];
+const TYPES = ["warn", "kick", "ban"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
