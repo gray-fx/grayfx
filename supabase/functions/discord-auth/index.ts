@@ -7,16 +7,20 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
-  if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
-  }
-
   const clientId = Deno.env.get("DISCORD_CLIENT_ID");
   const clientSecret = Deno.env.get("DISCORD_CLIENT_SECRET");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!clientId || !clientSecret || !supabaseUrl || !serviceKey) {
     return json({ error: "Discord login is not configured" }, 500);
+  }
+
+  // Public config: the OAuth client ID is not a secret.
+  if (req.method === "GET") {
+    return json({ clientId });
+  }
+  if (req.method !== "POST") {
+    return json({ error: "Method not allowed" }, 405);
   }
 
   let body: { code?: string; redirectUri?: string };
