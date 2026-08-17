@@ -6,7 +6,7 @@ import {
   panelEnv,
 } from "../_shared/panel.ts";
 
-const TYPES = ["warn", "kick", "ban", "timeout"];
+const TYPES = ["warn", "kick", "ban"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
   const runInGame = Boolean(body.runInGame);
 
   const errors: string[] = [];
-  if (!TYPES.includes(type)) errors.push("Case type must be warn, kick, ban or timeout");
+  if (!TYPES.includes(type)) errors.push("Case type must be warn, kick or ban");
   if (!/^[A-Za-z0-9_]{3,20}$/.test(robloxUsername)) errors.push("Roblox username must be 3-20 characters (letters, numbers, underscores)");
   if (reason.length < 3 || reason.length > 1000) errors.push("Reason must be 3-1000 characters");
   if (errors.length) return json({ error: errors.join(". ") }, 400);
