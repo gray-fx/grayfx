@@ -31,7 +31,7 @@ type Case = {
   timestamp?: number | string;
 };
 
-const TYPES = ["warn", "kick", "ban", "timeout"] as const;
+const TYPES = ["warn", "kick", "ban"] as const;
 
 const PanelHome = () => {
   const { toast } = useToast();
