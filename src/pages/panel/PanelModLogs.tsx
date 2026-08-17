@@ -15,14 +15,13 @@ type Case = {
   type?: string;
   moderatorTag?: string;
   moderator?: string;
-  targetTag?: string;
-  targetId?: string;
+  robloxUsername?: string;
   reason?: string;
   createdAt?: string;
   timestamp?: string;
 };
 
-const TYPES = ["warn", "kick", "ban", "timeout"] as const;
+const TYPES = ["warn", "kick", "ban"] as const;
 
 const PanelModLogs = () => {
   const { toast } = useToast();
@@ -32,8 +31,7 @@ const PanelModLogs = () => {
   const [filterType, setFilterType] = useState("");
 
   const [type, setType] = useState<string>("warn");
-  const [targetTag, setTargetTag] = useState("");
-  const [targetId, setTargetId] = useState("");
+  const [robloxUsername, setRobloxUsername] = useState("");
   const [reason, setReason] = useState("");
   const [runInGame, setRunInGame] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +40,7 @@ const PanelModLogs = () => {
     setLoading(true);
     try {
       const res = await callPanel<{ cases?: Case[] } | Case[]>("modlogs-list", {
-        query: { targetId: filterTarget || undefined, type: filterType || undefined, limit: "100" },
+        query: { robloxUsername: filterTarget || undefined, type: filterType || undefined, limit: "100" },
       });
       const list = Array.isArray(res) ? res : ((res as any)?.cases ?? []);
       const sorted = [...list].sort((a, b) => {
@@ -66,10 +64,10 @@ const PanelModLogs = () => {
     try {
       await callPanel("modlogs-create", {
         method: "POST",
-        body: { type, targetTag, targetId: targetId || undefined, reason, runInGame },
+        body: { type, robloxUsername, reason, runInGame },
       });
       toast({ title: "Case created" });
-      setTargetTag(""); setTargetId(""); setReason(""); setRunInGame(false);
+      setRobloxUsername(""); setReason(""); setRunInGame(false);
       await load();
     } catch (err) {
       toast({ title: "Could not create case", description: (err as Error).message, variant: "destructive" });
@@ -97,12 +95,8 @@ const PanelModLogs = () => {
               </select>
             </div>
             <div className="space-y-2">
-              <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Target Discord tag</Label>
-              <Input value={targetTag} onChange={(e) => setTargetTag(e.target.value)} placeholder="username" required />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Target Discord ID (optional)</Label>
-              <Input value={targetId} onChange={(e) => setTargetId(e.target.value)} placeholder="123456789012345678" />
+              <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Roblox username</Label>
+              <Input value={robloxUsername} onChange={(e) => setRobloxUsername(e.target.value)} placeholder="RobloxPlayer123" required />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Reason</Label>
@@ -124,8 +118,8 @@ const PanelModLogs = () => {
         <section className="rounded-lg border border-border bg-card p-5 space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-2">
-              <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Target ID</Label>
-              <Input value={filterTarget} onChange={(e) => setFilterTarget(e.target.value)} placeholder="Filter by ID" className="w-48" />
+              <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Roblox username</Label>
+              <Input value={filterTarget} onChange={(e) => setFilterTarget(e.target.value)} placeholder="Filter by username" className="w-48" />
             </div>
             <div className="space-y-2">
               <Label className="font-body text-xs uppercase tracking-widest text-muted-foreground">Type</Label>
@@ -151,7 +145,7 @@ const PanelModLogs = () => {
                   <th className="py-2 pr-4">Case</th>
                   <th className="py-2 pr-4">Type</th>
                   <th className="py-2 pr-4">Moderator</th>
-                  <th className="py-2 pr-4">Target</th>
+                  <th className="py-2 pr-4">Roblox player</th>
                   <th className="py-2 pr-4">Reason</th>
                   <th className="py-2">When</th>
                 </tr>
@@ -162,7 +156,7 @@ const PanelModLogs = () => {
                     <td className="py-2 pr-4">#{c.caseNumber ?? "—"}</td>
                     <td className="py-2 pr-4 uppercase text-primary">{c.type}</td>
                     <td className="py-2 pr-4">{c.moderatorTag || c.moderator || "—"}</td>
-                    <td className="py-2 pr-4">{c.targetTag || c.targetId || "—"}</td>
+                    <td className="py-2 pr-4">{c.robloxUsername || "—"}</td>
                     <td className="py-2 pr-4 max-w-xs truncate">{c.reason}</td>
                     <td className="py-2 text-muted-foreground">
                       {c.createdAt || c.timestamp ? new Date(c.createdAt || c.timestamp!).toLocaleString() : "—"}
