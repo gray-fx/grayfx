@@ -13,6 +13,7 @@ import ScoreboardDisplay from "./pages/ScoreboardDisplay";
 import Booking from "./pages/Booking";
 import Upload from "./pages/Upload";
 import Downloads from "./pages/Downloads";
+import Host from "./pages/Host";
 import AthleteFinder from "./pages/AthleteFinder";
 import DAS5000Control from "./pages/DAS5000Control";
 import DAS5000Display from "./pages/DAS5000Display";
@@ -49,6 +50,7 @@ const App = () => (
           <Route path="/book" element={<Booking />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/downloads" element={<Downloads />} />
+          <Route path="/host" element={<Host />} />
           <Route path="/athlete-finder" element={<AthleteFinder />} />
           <Route path="/das5000-control" element={<DAS5000Control />} />
           <Route path="/das5000-display" element={<DAS5000Display />} />
