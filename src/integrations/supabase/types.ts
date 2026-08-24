@@ -209,13 +209,57 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_guide: {
+        Row: {
+          content_html: string
+          id: number
+          updated_at: string
+          updated_by_discord_id: string | null
+          updated_by_tag: string | null
+        }
+        Insert: {
+          content_html?: string
+          id?: number
+          updated_at?: string
+          updated_by_discord_id?: string | null
+          updated_by_tag?: string | null
+        }
+        Update: {
+          content_html?: string
+          id?: number
+          updated_at?: string
+          updated_by_discord_id?: string | null
+          updated_by_tag?: string | null
+        }
+        Relationships: []
+      }
+      staff_guide_settings: {
+        Row: {
+          id: number
+          password_hash: string
+        }
+        Insert: {
+          id?: number
+          password_hash: string
+        }
+        Update: {
+          id?: number
+          password_hash?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      set_guide_password: {
+        Args: { new_pw: string; old_pw: string }
+        Returns: boolean
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      verify_guide_password: { Args: { pw: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
