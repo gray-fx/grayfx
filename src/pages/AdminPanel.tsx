@@ -164,6 +164,9 @@ const AdminPanel = () => {
           <TabsContent value="calendar">
             <AdminCalendarTab />
           </TabsContent>
+          <TabsContent value="portfolios">
+            <AdminPortfoliosTab />
+          </TabsContent>
           <TabsContent value="photos">
             <AdminPhotosTab />
           </TabsContent>
