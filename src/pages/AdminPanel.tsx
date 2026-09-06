@@ -16,6 +16,7 @@ import AdminMaintenanceTab from "@/components/admin/AdminMaintenanceTab";
 import AdminCredentialsTab from "@/components/admin/AdminCredentialsTab";
 import AdminPhotosTab from "@/components/admin/AdminPhotosTab";
 import AdminPaymentsTab from "@/components/admin/AdminPaymentsTab";
+import AdminPortfoliosTab from "@/components/admin/AdminPortfoliosTab";
 
 const AdminPanel = () => {
   const { toast } = useToast();
