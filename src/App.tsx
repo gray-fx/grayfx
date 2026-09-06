@@ -20,6 +20,7 @@ import DAS5000Display from "./pages/DAS5000Display";
 import Payments from "./pages/Payments";
 import ThankYou from "./pages/ThankYou";
 import GamesLobby from "./pages/GamesLobby";
+import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 import DiscordOAuthHandler from "./components/panel/DiscordOAuthHandler";
 import PanelLogin from "./pages/panel/PanelLogin";
