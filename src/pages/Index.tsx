@@ -54,35 +54,35 @@ const Index = () => {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="mt-10 flex flex-col gap-4 sm:flex-row"
           >
-            
+            <a
               href="https://photos.grayfx.cam/"
               className="group inline-flex items-center gap-2 rounded-sm border border-primary bg-primary/10 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-primary-foreground"
             >
               <span>View Gallery</span>
               <ExternalLink className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
-            
+            <a
               href="#/portfolio"
               className="group inline-flex items-center gap-2 rounded-sm border border-border bg-secondary/50 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-foreground transition-all hover:border-primary hover:text-primary"
             >
               <span>View Portfolio</span>
               <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
             </a>
-            
+            <a
               href="#/book"
               className="group inline-flex items-center gap-2 rounded-sm border border-border bg-secondary/50 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-foreground transition-all hover:border-primary hover:text-primary"
             >
               <span>Book With Me</span>
               <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
             </a>
-            
+            <a
               href="#/availability"
               className="group inline-flex items-center gap-2 rounded-sm border border-border bg-secondary/50 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-foreground transition-all hover:border-primary hover:text-primary"
             >
               <span>Availability</span>
               <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
             </a>
-            
+            <a
               href="#/payments"
               className="group inline-flex items-center gap-2 rounded-sm border border-border bg-secondary/50 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-foreground transition-all hover:border-primary hover:text-primary"
             >
@@ -98,7 +98,7 @@ const Index = () => {
             className="mt-14 flex items-center gap-6"
           >
             {socialLinks.map(({ icon: Icon, label, href }) => (
-              
+              <a
                 key={label}
                 href={href}
                 aria-label={label}
@@ -201,7 +201,7 @@ const Index = () => {
 
           <ScrollSection delay={0.2}>
             <div className="mt-12 text-center">
-              
+              <a
                 href="https://photos.grayfx.cam/"
                 className="group inline-flex items-center gap-2 rounded-sm border border-primary bg-primary/10 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-primary-foreground"
               >
@@ -238,7 +238,7 @@ const Index = () => {
           <ScrollSection delay={0.2}>
             <div className="mt-10 flex justify-center gap-8">
               {socialLinks.map(({ icon: Icon, label, href }) => (
-                
+                <a
                   key={label}
                   href={href}
                   aria-label={label}
@@ -253,7 +253,7 @@ const Index = () => {
 
           <ScrollSection delay={0.3}>
             <div className="mt-10">
-              
+              <a
                 href="mailto:hello@example.com"
                 className="group inline-flex items-center gap-2 rounded-sm border border-primary bg-primary/10 px-8 py-3 font-body text-sm font-medium uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-primary-foreground"
               >
