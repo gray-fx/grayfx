@@ -58,6 +58,8 @@ const App = () => (
           <Route path="/payments" element={<Payments />} />
           <Route path="/thank-you" element={<ThankYou />} />
           <Route path="/games" element={<GamesLobby />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/portfolio/:slug" element={<Portfolio />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
