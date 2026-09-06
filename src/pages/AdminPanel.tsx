@@ -130,10 +130,14 @@ const AdminPanel = () => {
         </motion.div>
 
         <Tabs defaultValue="calendar" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-8">
+          <TabsList className="grid w-full grid-cols-7 mb-8">
             <TabsTrigger value="calendar" className="gap-1.5 text-xs">
               <CalendarDays className="h-4 w-4" />
               <span className="hidden sm:inline">Calendar</span>
+            </TabsTrigger>
+            <TabsTrigger value="portfolios" className="gap-1.5 text-xs">
+              <FolderOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Portfolio</span>
             </TabsTrigger>
             <TabsTrigger value="photos" className="gap-1.5 text-xs">
               <ImageIcon className="h-4 w-4" />
