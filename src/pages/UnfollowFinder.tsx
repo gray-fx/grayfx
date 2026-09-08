@@ -7,29 +7,51 @@ type UserEntry = { username: string };
 // with only `href`/`timestamp` in string_list_data, while followers files
 // store it in `string_list_data[].value`. This extracts it from whichever
 // field is actually populated.
+//
+// Robustness notes:
+// - Some hrefs are wrapped through Instagram's redirect domain
+//   (https://l.instagram.com/?u=<encoded real url>&e=...) instead of linking
+//   directly to the profile. We unwrap that before reading the path.
+// - followers_*.json is usually a bare top-level array, but some export
+//   variants wrap it as { relationships_followers: [...] }. We handle both.
+// - Usernames are trimmed, URI-decoded, and lowercased for consistent
+//   matching regardless of source format.
+
+function extractUsernameFromHref(href: string): string | null {
+  try {
+    let url = new URL(href);
+
+    // Unwrap Instagram's redirect/tracking domain if present.
+    if (url.hostname.includes("l.instagram.com") && url.searchParams.has("u")) {
+      url = new URL(url.searchParams.get("u")!);
+    }
+
+    const segment = url.pathname.split("/").filter(Boolean).pop();
+    return segment ? decodeURIComponent(segment).trim().toLowerCase() : null;
+  } catch {
+    // ignore malformed URLs
+    return null;
+  }
+}
+
 function extractUsername(item: any): string | null {
   const data = item?.string_list_data;
   if (Array.isArray(data)) {
     for (const entry of data) {
-      if (entry?.value) return entry.value.toLowerCase();
+      if (entry?.value) return entry.value.trim().toLowerCase();
       if (entry?.href) {
-        try {
-          const path = new URL(entry.href).pathname;
-          const segment = path.split("/").filter(Boolean).pop();
-          if (segment) return segment.toLowerCase();
-        } catch {
-          // ignore malformed URLs
-        }
+        const username = extractUsernameFromHref(entry.href);
+        if (username) return username;
       }
     }
   }
-  if (item?.title) return item.title.toLowerCase();
+  if (item?.title) return item.title.trim().toLowerCase();
   return null;
 }
 
 function parseFollowing(json: any): string[] {
   const usernames: string[] = [];
-  const list = json?.relationships_following || [];
+  const list = Array.isArray(json) ? json : json?.relationships_following || [];
   for (const item of list) {
     const username = extractUsername(item);
     if (username) usernames.push(username);
@@ -39,7 +61,7 @@ function parseFollowing(json: any): string[] {
 
 function parseFollowers(json: any): string[] {
   const usernames: string[] = [];
-  const list = Array.isArray(json) ? json : [];
+  const list = Array.isArray(json) ? json : json?.relationships_followers || [];
   for (const item of list) {
     const username = extractUsername(item);
     if (username) usernames.push(username);
