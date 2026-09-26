@@ -250,6 +250,30 @@ export type Database = {
         }
         Relationships: []
       }
+      share_links: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          kind: string
+          path: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          kind: string
+          path: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          path?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           created_at: string
