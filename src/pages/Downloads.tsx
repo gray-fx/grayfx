@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Download, Folder, FileIcon, Trash2 } from "lucide-react";
+import { Loader2, Download, Folder, FileIcon, Trash2, Share2 } from "lucide-react";
 
 interface FileEntry {
   name: string;
@@ -103,6 +103,25 @@ export default function Downloads() {
     return `${(b / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const createShare = async (kind: "file" | "folder", path: string) => {
+    const raw = prompt("Enter a code for the share link (e.g. justin):");
+    if (!raw) return;
+    const code = raw.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+    if (!code) return;
+    const { error } = await supabase.from("share_links").insert({ code, kind, path });
+    if (error) {
+      toast({
+        title: "Couldn't create link",
+        description: error.code === "23505" ? "That code is already taken." : error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    const url = `${window.location.origin}${window.location.pathname}#/file/${code}`;
+    try { await navigator.clipboard.writeText(url); } catch {}
+    toast({ title: "Share link copied", description: url });
+  };
+
   const deleteBatch = async (folder: string, paths: string[]) => {
     if (!confirm(`Delete entire batch "${folder}"?`)) return;
     const { error } = await supabase.storage.from("uploads").remove(paths);
@@ -167,31 +186,40 @@ export default function Downloads() {
                       )}
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => deleteBatch(b.folder, b.files.map((f) => f.path))}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => createShare("folder", b.folder)}>
+                      <Share2 className="h-4 w-4 mr-1" /> Share folder
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => deleteBatch(b.folder, b.files.map((f) => f.path))}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   {b.files.map((f) => (
-                    <a
-                      key={f.path}
-                      href={f.url}
-                      download={f.name}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted/50 transition-colors"
-                    >
-                      <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm flex-1 truncate">{f.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatSize(f.size)}
-                      </span>
-                      <Download className="h-4 w-4 text-muted-foreground" />
-                    </a>
+                    <div key={f.path} className="flex items-center gap-1">
+                      <a
+                        href={f.url}
+                        download={f.name}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex flex-1 min-w-0 items-center gap-3 px-3 py-2 rounded-md hover:bg-muted/50 transition-colors"
+                      >
+                        <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm flex-1 truncate">{f.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatSize(f.size)}
+                        </span>
+                        <Download className="h-4 w-4 text-muted-foreground" />
+                      </a>
+                      <Button size="sm" variant="ghost" title="Share file" onClick={() => createShare("file", f.path)}>
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
               </div>
