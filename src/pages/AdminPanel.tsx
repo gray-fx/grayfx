@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key, ImageIcon, CreditCard, FolderOpen } from "lucide-react";
+import { ArrowLeft, CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key, ImageIcon, CreditCard, FolderOpen, Images } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import AdminCredentialsTab from "@/components/admin/AdminCredentialsTab";
 import AdminPhotosTab from "@/components/admin/AdminPhotosTab";
 import AdminPaymentsTab from "@/components/admin/AdminPaymentsTab";
 import AdminPortfoliosTab from "@/components/admin/AdminPortfoliosTab";
+import AdminGalleriesTab from "@/components/admin/AdminGalleriesTab";
 
 const AdminPanel = () => {
   const { toast } = useToast();
@@ -130,10 +131,14 @@ const AdminPanel = () => {
         </motion.div>
 
         <Tabs defaultValue="calendar" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-8">
+          <TabsList className="grid w-full grid-cols-8 mb-8">
             <TabsTrigger value="calendar" className="gap-1.5 text-xs">
               <CalendarDays className="h-4 w-4" />
               <span className="hidden sm:inline">Calendar</span>
+            </TabsTrigger>
+            <TabsTrigger value="galleries" className="gap-1.5 text-xs">
+              <Images className="h-4 w-4" />
+              <span className="hidden sm:inline">Clients</span>
             </TabsTrigger>
             <TabsTrigger value="portfolios" className="gap-1.5 text-xs">
               <FolderOpen className="h-4 w-4" />
@@ -163,6 +168,9 @@ const AdminPanel = () => {
 
           <TabsContent value="calendar">
             <AdminCalendarTab />
+          </TabsContent>
+          <TabsContent value="galleries">
+            <AdminGalleriesTab />
           </TabsContent>
           <TabsContent value="portfolios">
             <AdminPortfoliosTab />

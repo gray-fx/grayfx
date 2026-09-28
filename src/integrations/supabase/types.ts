@@ -119,6 +119,107 @@ export type Database = {
         }
         Relationships: []
       }
+      client_galleries: {
+        Row: {
+          created_at: string
+          event_date: string | null
+          id: string
+          name: string
+          password_hash: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          event_date?: string | null
+          id?: string
+          name: string
+          password_hash?: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          event_date?: string | null
+          id?: string
+          name?: string
+          password_hash?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      client_gallery_favorites: {
+        Row: {
+          created_at: string
+          gallery_id: string
+          id: string
+          photo_id: string
+        }
+        Insert: {
+          created_at?: string
+          gallery_id: string
+          id?: string
+          photo_id: string
+        }
+        Update: {
+          created_at?: string
+          gallery_id?: string
+          id?: string
+          photo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_gallery_favorites_gallery_id_fkey"
+            columns: ["gallery_id"]
+            isOneToOne: false
+            referencedRelation: "client_galleries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_gallery_favorites_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: true
+            referencedRelation: "client_gallery_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_gallery_photos: {
+        Row: {
+          created_at: string
+          file_name: string
+          gallery_id: string
+          id: string
+          image_url: string
+          sort_order: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string
+          gallery_id: string
+          id?: string
+          image_url: string
+          sort_order?: number
+          storage_path?: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          gallery_id?: string
+          id?: string
+          image_url?: string
+          sort_order?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_gallery_photos_gallery_id_fkey"
+            columns: ["gallery_id"]
+            isOneToOne: false
+            referencedRelation: "client_galleries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gallery_photos: {
         Row: {
           caption: string
@@ -345,6 +446,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      client_gallery_pw_ok: {
+        Args: {
+          _g: Database["public"]["Tables"]["client_galleries"]["Row"]
+          _pw: string
+        }
+        Returns: boolean
+      }
+      get_client_gallery: {
+        Args: { _pw: string; _slug: string }
+        Returns: Json
+      }
+      set_client_favorite: {
+        Args: { _fav: boolean; _photo_id: string; _pw: string; _slug: string }
+        Returns: boolean
+      }
+      set_client_gallery_password: {
+        Args: { _id: string; _pw: string }
+        Returns: undefined
+      }
       set_guide_password: {
         Args: { new_pw: string; old_pw: string }
         Returns: boolean
