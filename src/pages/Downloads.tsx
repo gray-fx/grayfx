@@ -3,7 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Download, Folder, FileIcon, Trash2, Share2 } from "lucide-react";
+import { Loader2, Download, Folder, FileIcon, Trash2, Share2, Eye, X } from "lucide-react";
+
+const isImage = (n: string) => /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(n);
+const isVideo = (n: string) => /\.(mp4|webm|mov|m4v|ogv)$/i.test(n);
+const isAudio = (n: string) => /\.(mp3|wav|ogg|m4a|flac)$/i.test(n);
+const isPreviewable = (n: string) => isImage(n) || isVideo(n) || isAudio(n);
 
 interface FileEntry {
   name: string;
@@ -25,6 +30,7 @@ export default function Downloads() {
   const [verifying, setVerifying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [batches, setBatches] = useState<BatchEntry[]>([]);
+  const [preview, setPreview] = useState<FileEntry | null>(null);
 
   const verifyPassword = async () => {
     setVerifying(true);
@@ -216,6 +222,11 @@ export default function Downloads() {
                         </span>
                         <Download className="h-4 w-4 text-muted-foreground" />
                       </a>
+                      {isPreviewable(f.name) && (
+                        <Button size="sm" variant="ghost" title="Preview" onClick={() => setPreview(f)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" title="Share file" onClick={() => createShare("file", f.path)}>
                         <Share2 className="h-4 w-4" />
                       </Button>
@@ -227,6 +238,43 @@ export default function Downloads() {
           </div>
         )}
       </div>
+
+      {preview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setPreview(null)}
+        >
+          <div
+            className="bg-background border border-border rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+              <p className="font-medium truncate">{preview.name}</p>
+              <div className="flex items-center gap-1 shrink-0">
+                <a href={preview.url} download={preview.name} target="_blank" rel="noreferrer">
+                  <Button size="sm" variant="outline">
+                    <Download className="h-4 w-4 mr-1" /> Download
+                  </Button>
+                </a>
+                <Button size="sm" variant="ghost" onClick={() => setPreview(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto flex items-center justify-center bg-black/40 p-4">
+              {isImage(preview.name) && (
+                <img src={preview.url} alt={preview.name} className="max-w-full max-h-[70vh] object-contain" />
+              )}
+              {isVideo(preview.name) && (
+                <video src={preview.url} controls autoPlay className="max-w-full max-h-[70vh]" />
+              )}
+              {isAudio(preview.name) && (
+                <audio src={preview.url} controls autoPlay className="w-full" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
