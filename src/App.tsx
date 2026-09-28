@@ -23,6 +23,7 @@ import GamesLobby from "./pages/GamesLobby";
 import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 import SharedFile from "./pages/SharedFile";
+import ClientGallery from "./pages/ClientGallery";
 import DiscordOAuthHandler from "./components/panel/DiscordOAuthHandler";
 import PanelLogin from "./pages/panel/PanelLogin";
 import PanelHome from "./pages/panel/PanelHome";
@@ -61,6 +62,7 @@ const App = () => (
           <Route path="/games" element={<GamesLobby />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/portfolio/:slug" element={<Portfolio />} />
+          <Route path="/gallery/:slug" element={<ClientGallery />} />
           <Route path="/file/:code" element={<SharedFile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
