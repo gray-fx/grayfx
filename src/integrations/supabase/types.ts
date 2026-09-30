@@ -191,6 +191,7 @@ export type Database = {
           image_url: string
           sort_order: number
           storage_path: string
+          taken_at: string | null
         }
         Insert: {
           created_at?: string
@@ -200,6 +201,7 @@ export type Database = {
           image_url: string
           sort_order?: number
           storage_path?: string
+          taken_at?: string | null
         }
         Update: {
           created_at?: string
@@ -209,6 +211,7 @@ export type Database = {
           image_url?: string
           sort_order?: number
           storage_path?: string
+          taken_at?: string | null
         }
         Relationships: [
           {
