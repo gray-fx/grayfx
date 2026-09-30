@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Copy, Heart, Loader2, Plus, Trash2, Upload, ExternalLink, Lock } from "lucide-react";
+import exifr from "exifr";
+import { Copy, Heart, Loader2, Plus, Trash2, Upload, ExternalLink, Lock, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Gallery { id: string; name: string; slug: string; event_date: string | null; password_hash: string; created_at: string; }
-interface Photo { id: string; image_url: string; storage_path: string; file_name: string; }
+interface Photo { id: string; image_url: string; storage_path: string; file_name: string; taken_at: string | null; }
 
 const slugify = (s: string) =>
   s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50);
@@ -27,6 +28,7 @@ const AdminGalleriesTab = () => {
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [drag, setDrag] = useState(false);
   const [newPw, setNewPw] = useState("");
+  const [newCode, setNewCode] = useState("");
 
   const loadGalleries = useCallback(async () => {
     const { data } = await supabase.from("client_galleries").select("*").order("created_at", { ascending: false });
@@ -35,7 +37,7 @@ const AdminGalleriesTab = () => {
 
   const loadPhotos = useCallback(async (gid: string) => {
     const [{ data: p }, { data: f }] = await Promise.all([
-      supabase.from("client_gallery_photos").select("*").eq("gallery_id", gid).order("sort_order").order("created_at"),
+      supabase.from("client_gallery_photos").select("*").eq("gallery_id", gid).order("taken_at", { ascending: true, nullsFirst: false }).order("file_name"),
       supabase.from("client_gallery_favorites").select("photo_id").eq("gallery_id", gid),
     ]);
     setPhotos((p as Photo[]) ?? []);
@@ -77,11 +79,18 @@ const AdminGalleriesTab = () => {
         const { f, i } = queue.shift()!;
         const ext = f.name.split(".").pop() || "jpg";
         const path = `galleries/${selected.id}/${crypto.randomUUID()}.${ext}`;
+        let taken: string | null = null;
+        try {
+          const meta = await exifr.parse(f, ["DateTimeOriginal", "CreateDate"]);
+          const d = meta?.DateTimeOriginal || meta?.CreateDate;
+          if (d instanceof Date && !isNaN(d.getTime())) taken = d.toISOString();
+        } catch { /* no exif */ }
+        if (!taken && f.lastModified) taken = new Date(f.lastModified).toISOString();
         const { error } = await supabase.storage.from("uploads").upload(path, f, { contentType: f.type });
         if (!error) {
           const { data } = supabase.storage.from("uploads").getPublicUrl(path);
           await supabase.from("client_gallery_photos").insert({
-            gallery_id: selected.id, image_url: data.publicUrl, storage_path: path, file_name: f.name, sort_order: base + i,
+            gallery_id: selected.id, image_url: data.publicUrl, storage_path: path, file_name: f.name, sort_order: base + i, taken_at: taken,
           });
         }
         done++;
@@ -95,9 +104,27 @@ const AdminGalleriesTab = () => {
   };
 
   const deletePhoto = async (p: Photo) => {
+    if (!confirm(`Remove ${p.file_name || "this photo"} from the gallery?`)) return;
     if (p.storage_path) await supabase.storage.from("uploads").remove([p.storage_path]);
+    await supabase.from("client_gallery_favorites").delete().eq("photo_id", p.id);
     await supabase.from("client_gallery_photos").delete().eq("id", p.id);
     setPhotos((ps) => ps.filter((x) => x.id !== p.id));
+  };
+
+  const saveCode = async () => {
+    if (!selected) return;
+    const code = slugify(newCode);
+    if (!code) return;
+    const { error } = await supabase.from("client_galleries").update({ slug: code }).eq("id", selected.id);
+    if (error) {
+      toast({ title: "Code unavailable", description: error.code === "23505" ? "That code is already used." : error.message, variant: "destructive" });
+      return;
+    }
+    setSelected({ ...selected, slug: code });
+    setNewCode("");
+    loadGalleries();
+    navigator.clipboard.writeText(galleryUrl(code));
+    toast({ title: "Link updated & copied", description: galleryUrl(code) });
   };
 
   const deleteGallery = async (g: Gallery) => {
@@ -148,6 +175,14 @@ const AdminGalleriesTab = () => {
 
         <div className="flex gap-2 items-end">
           <div className="flex-1 space-y-1">
+            <Label className="text-xs">Link code (current: {selected.slug})</Label>
+            <Input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="e.g. justin" />
+          </div>
+          <Button size="sm" onClick={saveCode}><Link2 className="h-4 w-4 mr-1" />Set code</Button>
+        </div>
+
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 space-y-1">
             <Label className="text-xs">Change password (leave blank to remove)</Label>
             <Input type="text" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="New password" />
           </div>
@@ -190,8 +225,8 @@ const AdminGalleriesTab = () => {
             <div key={p.id} className="relative group aspect-square overflow-hidden rounded-sm bg-muted">
               <img src={p.image_url} alt={p.file_name} loading="lazy" className="w-full h-full object-cover" />
               {favs.has(p.id) && <Heart className="absolute top-1.5 left-1.5 h-4 w-4 fill-primary text-primary" />}
-              <button onClick={() => deletePhoto(p)} className="absolute top-1.5 right-1.5 p-1 rounded-sm bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              <button onClick={() => deletePhoto(p)} title="Remove photo" className="absolute top-1.5 right-1.5 p-1.5 rounded-sm bg-background/80 hover:bg-destructive/20 transition-colors">
+                <Trash2 className="h-4 w-4 text-destructive" />
               </button>
             </div>
           ))}
