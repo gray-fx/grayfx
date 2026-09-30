@@ -32,6 +32,13 @@ const ClientGallery = () => {
   const [open, setOpen] = useState<number | null>(null);
   const [zipping, setZipping] = useState<number | null>(null);
   const [onlyFavs, setOnlyFavs] = useState(false);
+  const calcCols = () => (window.innerWidth >= 1024 ? 4 : window.innerWidth >= 768 ? 3 : 2);
+  const [cols, setCols] = useState(calcCols);
+  useEffect(() => {
+    const r = () => setCols(calcCols());
+    window.addEventListener("resize", r);
+    return () => window.removeEventListener("resize", r);
+  }, []);
 
   const load = useCallback(async (password: string) => {
     const { data: res } = await supabase.rpc("get_client_gallery", { _slug: slug, _pw: password });
@@ -148,19 +155,23 @@ const ClientGallery = () => {
 
       <main className="max-w-7xl mx-auto px-2 sm:px-4 py-6">
         {shown.length === 0 && <p className="text-center text-muted-foreground font-body py-20">{onlyFavs ? "Tap the heart on photos to add favorites." : "No photos yet."}</p>}
-        <div className="columns-2 md:columns-3 lg:columns-4 gap-2 sm:gap-3">
-          {shown.map((p, i) => (
-            <div key={p.id} className="relative group mb-2 sm:mb-3 break-inside-avoid overflow-hidden cursor-zoom-in" onClick={() => setOpen(i)}>
-              <img src={p.image_url} alt={p.file_name} loading="lazy" className="w-full h-auto block transition-transform duration-500 group-hover:scale-[1.02]" />
-              <div className="absolute inset-x-0 bottom-0 p-2 flex justify-end gap-1 bg-gradient-to-t from-background/70 to-transparent opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                <button aria-label="Favorite" onClick={(e) => { e.stopPropagation(); toggleFav(p); }} className="p-1.5">
-                  <Heart className={`h-5 w-5 ${p.is_favorite ? "fill-primary text-primary" : "text-foreground"}`} />
-                </button>
-                <button aria-label="Download" onClick={(e) => { e.stopPropagation(); downloadOne(p); }} className="p-1.5">
-                  <Download className="h-5 w-5 text-foreground" />
-                </button>
-              </div>
-              {p.is_favorite && <Heart className="absolute top-2 right-2 h-4 w-4 fill-primary text-primary sm:group-hover:opacity-0" />}
+        <div className="flex gap-2 sm:gap-3 items-start">
+          {Array.from({ length: cols }, (_, c) => (
+            <div key={c} className="flex-1 min-w-0 flex flex-col gap-2 sm:gap-3">
+              {shown.map((p, i) => (i % cols !== c ? null : (
+                <div key={p.id} className="relative group overflow-hidden cursor-zoom-in bg-muted/30" onClick={() => setOpen(i)}>
+                  <img src={p.image_url} alt={p.file_name} loading={i < cols * 3 ? "eager" : "lazy"} decoding="async" className="w-full h-auto block min-h-[120px] transition-transform duration-500 group-hover:scale-[1.02]" />
+                  <div className="absolute inset-x-0 bottom-0 p-2 flex justify-end gap-1 bg-gradient-to-t from-background/70 to-transparent opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button aria-label="Favorite" onClick={(e) => { e.stopPropagation(); toggleFav(p); }} className="p-1.5">
+                      <Heart className={`h-5 w-5 ${p.is_favorite ? "fill-primary text-primary" : "text-foreground"}`} />
+                    </button>
+                    <button aria-label="Download" onClick={(e) => { e.stopPropagation(); downloadOne(p); }} className="p-1.5">
+                      <Download className="h-5 w-5 text-foreground" />
+                    </button>
+                  </div>
+                  {p.is_favorite && <Heart className="absolute top-2 right-2 h-4 w-4 fill-primary text-primary sm:group-hover:opacity-0" />}
+                </div>
+              )))}
             </div>
           ))}
         </div>
