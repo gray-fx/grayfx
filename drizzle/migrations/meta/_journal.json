@@ -29,6 +29,13 @@
       "when": 1790866203845,
       "tag": "0003_client_gallery_homepage_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790866232693,
+      "tag": "0004_public_client_gallery_index",
+      "breakpoints": true
     }
   ]
 }

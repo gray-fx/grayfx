@@ -474,6 +474,7 @@ export type Database = {
         Args: { _pw: string; _slug: string }
         Returns: Json
       }
+      get_public_client_galleries: { Args: never; Returns: Json }
       set_client_favorite: {
         Args: { _fav: boolean; _photo_id: string; _pw: string; _slug: string }
         Returns: boolean
