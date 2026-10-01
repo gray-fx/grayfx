@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key, ImageIcon, CreditCard, FolderOpen, Images } from "lucide-react";
-import { Link } from "react-router-dom";
+import { CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key, ImageIcon, CreditCard, FolderOpen, Images, PanelLeftClose } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton,
+  SidebarMenuItem, SidebarProvider, SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
@@ -26,6 +30,28 @@ const AdminPanel = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const section = searchParams.get("section") || "calendar";
+
+  const navGroups = [
+    { label: "Schedule", items: [{ value: "calendar", label: "Availability", icon: CalendarDays }] },
+    { label: "Galleries", items: [
+      { value: "galleries", label: "Client galleries", icon: Images },
+      { value: "portfolios", label: "Portfolios", icon: FolderOpen },
+      { value: "photos", label: "Site photos", icon: ImageIcon },
+    ] },
+    { label: "Site", items: [
+      { value: "announcements", label: "Announcements", icon: Megaphone },
+      { value: "payments", label: "Payment options", icon: CreditCard },
+      { value: "maintenance", label: "Maintenance", icon: Shield },
+    ] },
+    { label: "Account", items: [{ value: "credentials", label: "Login details", icon: Key }] },
+  ];
+
+  const titles: Record<string, string> = {
+    calendar: "Availability", galleries: "Client galleries", portfolios: "Portfolios", photos: "Site photos",
+    announcements: "Announcements", payments: "Payment options", maintenance: "Maintenance", credentials: "Login details",
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -102,97 +128,51 @@ const AdminPanel = () => {
     );
   }
 
+  const content: Record<string, React.ReactNode> = {
+    calendar: <AdminCalendarTab />, galleries: <AdminGalleriesTab />, portfolios: <AdminPortfoliosTab />,
+    photos: <AdminPhotosTab />, announcements: <AdminAnnouncementsTab />, payments: <AdminPaymentsTab />,
+    maintenance: <AdminMaintenanceTab />, credentials: <AdminCredentialsTab />,
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-3xl mx-auto px-6 py-16">
-        <div className="flex items-center justify-between mb-8">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-body text-sm"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Link>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="font-display text-3xl font-bold tracking-tight">Admin Panel</h1>
-          <p className="text-muted-foreground font-body text-sm mt-1">
-            Manage your site settings from one place.
-          </p>
-        </motion.div>
-
-        <Tabs defaultValue="calendar" className="w-full">
-          <TabsList className="grid w-full grid-cols-8 mb-8">
-            <TabsTrigger value="calendar" className="gap-1.5 text-xs">
-              <CalendarDays className="h-4 w-4" />
-              <span className="hidden sm:inline">Calendar</span>
-            </TabsTrigger>
-            <TabsTrigger value="galleries" className="gap-1.5 text-xs">
-              <Images className="h-4 w-4" />
-              <span className="hidden sm:inline">Clients</span>
-            </TabsTrigger>
-            <TabsTrigger value="portfolios" className="gap-1.5 text-xs">
-              <FolderOpen className="h-4 w-4" />
-              <span className="hidden sm:inline">Portfolio</span>
-            </TabsTrigger>
-            <TabsTrigger value="photos" className="gap-1.5 text-xs">
-              <ImageIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Photos</span>
-            </TabsTrigger>
-            <TabsTrigger value="announcements" className="gap-1.5 text-xs">
-              <Megaphone className="h-4 w-4" />
-              <span className="hidden sm:inline">Announce</span>
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="gap-1.5 text-xs">
-              <CreditCard className="h-4 w-4" />
-              <span className="hidden sm:inline">Payments</span>
-            </TabsTrigger>
-            <TabsTrigger value="maintenance" className="gap-1.5 text-xs">
-              <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Maintain</span>
-            </TabsTrigger>
-            <TabsTrigger value="credentials" className="gap-1.5 text-xs">
-              <Key className="h-4 w-4" />
-              <span className="hidden sm:inline">Account</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="calendar">
-            <AdminCalendarTab />
-          </TabsContent>
-          <TabsContent value="galleries">
-            <AdminGalleriesTab />
-          </TabsContent>
-          <TabsContent value="portfolios">
-            <AdminPortfoliosTab />
-          </TabsContent>
-          <TabsContent value="photos">
-            <AdminPhotosTab />
-          </TabsContent>
-          <TabsContent value="announcements">
-            <AdminAnnouncementsTab />
-          </TabsContent>
-          <TabsContent value="payments">
-            <AdminPaymentsTab />
-          </TabsContent>
-          <TabsContent value="maintenance">
-            <AdminMaintenanceTab />
-          </TabsContent>
-          <TabsContent value="credentials">
-            <AdminCredentialsTab />
-          </TabsContent>
-        </Tabs>
+    <SidebarProvider defaultOpen>
+      <div className="flex min-h-screen w-full bg-background text-foreground">
+        <Sidebar collapsible="icon">
+          <SidebarHeader className="border-b border-sidebar-border p-4">
+            <Link to="/" className="flex items-center gap-3 overflow-hidden">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"><PanelLeftClose className="h-4 w-4" /></div>
+              <div className="min-w-0 group-data-[collapsible=icon]:hidden"><p className="truncate font-display font-bold">GrayFX Admin</p><p className="truncate text-xs text-muted-foreground">Site management</p></div>
+            </Link>
+          </SidebarHeader>
+          <SidebarContent>
+            {navGroups.map((group) => (
+              <SidebarGroup key={group.label}>
+                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                <SidebarGroupContent><SidebarMenu>{group.items.map((item) => (
+                  <SidebarMenuItem key={item.value}>
+                    <SidebarMenuButton tooltip={item.label} isActive={section === item.value} onClick={() => setSearchParams({ section: item.value })}>
+                      <item.icon className="h-4 w-4" /><span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}</SidebarMenu></SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+          <SidebarFooter className="border-t border-sidebar-border p-3">
+            <SidebarMenu><SidebarMenuItem><SidebarMenuButton tooltip="Sign out" onClick={handleLogout}><LogOut className="h-4 w-4" /><span>Sign out</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset className="min-w-0 bg-background">
+          <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6">
+            <SidebarTrigger />
+            <div><p className="text-xs text-muted-foreground">Admin panel</p><h1 className="font-display text-lg font-bold">{titles[section] || "Availability"}</h1></div>
+          </header>
+          <motion.main key={section} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl p-4 sm:p-8">
+            {content[section] ?? content.calendar}
+          </motion.main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 

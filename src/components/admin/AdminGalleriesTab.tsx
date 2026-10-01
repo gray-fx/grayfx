@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import exifr from "exifr";
-import { Copy, Heart, Loader2, Plus, Trash2, Upload, ExternalLink, Lock, Link2 } from "lucide-react";
+import { Copy, Heart, Loader2, Plus, Trash2, Upload, ExternalLink, Lock, Link2, Eye, EyeOff, Image as CoverIcon, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-interface Gallery { id: string; name: string; slug: string; event_date: string | null; password_hash: string; created_at: string; }
+interface Gallery { id: string; name: string; slug: string; event_date: string | null; password_hash: string; created_at: string; is_visible: boolean; cover_photo_id: string | null; }
 interface Photo { id: string; image_url: string; storage_path: string; file_name: string; taken_at: string | null; }
 
 const slugify = (s: string) =>
@@ -29,6 +31,8 @@ const AdminGalleriesTab = () => {
   const [drag, setDrag] = useState(false);
   const [newPw, setNewPw] = useState("");
   const [newCode, setNewCode] = useState("");
+  const [homepage, setHomepage] = useState({ title: "Client Galleries", intro: "Find your gallery, revisit every moment, and download your favorites in full quality.", logoUrl: "", contactLabel: "Contact", contactUrl: "", footer: "Photography by GrayFX" });
+  const [savingHomepage, setSavingHomepage] = useState(false);
 
   const loadGalleries = useCallback(async () => {
     const { data } = await supabase.from("client_galleries").select("*").order("created_at", { ascending: false });
@@ -44,7 +48,12 @@ const AdminGalleriesTab = () => {
     setFavs(new Set((f ?? []).map((x) => x.photo_id)));
   }, []);
 
-  useEffect(() => { loadGalleries(); }, [loadGalleries]);
+  useEffect(() => {
+    loadGalleries();
+    supabase.from("site_settings").select("value").eq("key", "gallery_homepage").maybeSingle().then(({ data }) => {
+      if (data?.value && typeof data.value === "object") setHomepage((current) => ({ ...current, ...(data.value as typeof current) }));
+    });
+  }, [loadGalleries]);
   useEffect(() => { if (selected) loadPhotos(selected.id); }, [selected, loadPhotos]);
 
   const create = async (e: React.FormEvent) => {
@@ -152,6 +161,24 @@ const AdminGalleriesTab = () => {
     toast({ title: "Link copied" });
   };
 
+  const updateGallery = async (changes: Partial<Pick<Gallery, "is_visible" | "cover_photo_id">>) => {
+    if (!selected) return;
+    const { error } = await supabase.from("client_galleries").update(changes).eq("id", selected.id);
+    if (error) {
+      toast({ title: "Couldn't update gallery", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSelected({ ...selected, ...changes });
+    setGalleries((items) => items.map((gallery) => gallery.id === selected.id ? { ...gallery, ...changes } : gallery));
+  };
+
+  const saveHomepage = async () => {
+    setSavingHomepage(true);
+    const { error } = await supabase.from("site_settings").upsert({ key: "gallery_homepage", value: homepage, is_active: true, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    setSavingHomepage(false);
+    toast(error ? { title: "Couldn't save homepage", description: error.message, variant: "destructive" } : { title: "Gallery homepage saved" });
+  };
+
   if (selected) {
     const favPhotos = photos.filter((p) => favs.has(p.id));
     return (
@@ -179,6 +206,11 @@ const AdminGalleriesTab = () => {
             <Input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="e.g. justin" />
           </div>
           <Button size="sm" onClick={saveCode}><Link2 className="h-4 w-4 mr-1" />Set code</Button>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-y border-border py-4">
+          <div><Label htmlFor="gallery-visible">Show on gallery homepage</Label><p className="mt-1 text-xs text-muted-foreground">Turning this off keeps the direct link working.</p></div>
+          <Switch id="gallery-visible" checked={selected.is_visible} onCheckedChange={(checked) => updateGallery({ is_visible: checked })} />
         </div>
 
         <div className="flex gap-2 items-end">
@@ -222,12 +254,15 @@ const AdminGalleriesTab = () => {
 
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {photos.map((p) => (
-            <div key={p.id} className="relative group aspect-square overflow-hidden rounded-sm bg-muted">
+            <div key={p.id} className={`relative group aspect-square overflow-hidden rounded-sm bg-muted ${selected.cover_photo_id === p.id ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
               <img src={p.image_url} alt={p.file_name} loading="lazy" className="w-full h-full object-cover" />
               {favs.has(p.id) && <Heart className="absolute top-1.5 left-1.5 h-4 w-4 fill-primary text-primary" />}
               <button onClick={() => deletePhoto(p)} title="Remove photo" className="absolute top-1.5 right-1.5 p-1.5 rounded-sm bg-background/80 hover:bg-destructive/20 transition-colors">
                 <Trash2 className="h-4 w-4 text-destructive" />
               </button>
+              <Button type="button" size="icon" variant="secondary" title="Use as gallery cover" onClick={() => updateGallery({ cover_photo_id: p.id })} className="absolute bottom-1.5 right-1.5 h-8 w-8">
+                <CoverIcon className="h-4 w-4" />
+              </Button>
             </div>
           ))}
         </div>
@@ -237,6 +272,22 @@ const AdminGalleriesTab = () => {
 
   return (
     <div className="space-y-8">
+      <section className="space-y-4 border-b border-border pb-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="font-display text-lg font-bold">Gallery homepage</h2><p className="text-sm text-muted-foreground">Customize the public page that lists visible client galleries.</p></div>
+          <Button variant="outline" size="sm" asChild><a href={`${window.location.origin}${window.location.pathname}#/galleries`} target="_blank" rel="noreferrer"><ExternalLink className="mr-2 h-4 w-4" />Open page</a></Button>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1 sm:col-span-2"><Label>Heading</Label><Input value={homepage.title} onChange={(e) => setHomepage({ ...homepage, title: e.target.value })} /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Introduction</Label><Textarea value={homepage.intro} onChange={(e) => setHomepage({ ...homepage, intro: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Logo image URL</Label><Input value={homepage.logoUrl} onChange={(e) => setHomepage({ ...homepage, logoUrl: e.target.value })} placeholder="https://..." /></div>
+          <div className="space-y-1"><Label>Contact link</Label><Input value={homepage.contactUrl} onChange={(e) => setHomepage({ ...homepage, contactUrl: e.target.value })} placeholder="mailto:you@example.com" /></div>
+          <div className="space-y-1"><Label>Contact button label</Label><Input value={homepage.contactLabel} onChange={(e) => setHomepage({ ...homepage, contactLabel: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Footer text</Label><Input value={homepage.footer} onChange={(e) => setHomepage({ ...homepage, footer: e.target.value })} /></div>
+        </div>
+        <Button onClick={saveHomepage} disabled={savingHomepage}>{savingHomepage ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save homepage</Button>
+      </section>
+
       <form onSubmit={create} className="space-y-3 border border-border rounded-sm p-4">
         <h2 className="font-display text-lg font-bold">New client gallery</h2>
         <div className="grid sm:grid-cols-3 gap-3">
@@ -264,7 +315,7 @@ const AdminGalleriesTab = () => {
           <div key={g.id} className="flex items-center justify-between gap-3 border border-border rounded-sm p-3 hover:border-primary/50 transition-colors">
             <button className="text-left flex-1" onClick={() => setSelected(g)}>
               <p className="font-display font-semibold">{g.name}</p>
-              <p className="text-xs text-muted-foreground font-body">{g.event_date ?? "No date"}{g.password_hash ? " · 🔒" : ""}</p>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground font-body">{g.event_date ?? "No date"}{g.password_hash ? " · Password protected" : ""} · {g.is_visible ? <><Eye className="h-3 w-3" /> Public</> : <><EyeOff className="h-3 w-3" /> Hidden</>}</p>
             </button>
             <Button size="sm" variant="ghost" onClick={() => copyLink(g.slug)}><Copy className="h-4 w-4" /></Button>
           </div>

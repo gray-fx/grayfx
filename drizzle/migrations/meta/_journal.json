@@ -22,6 +22,20 @@
       "when": 1790804428433,
       "tag": "0002_client_photo_taken_at",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790866203845,
+      "tag": "0003_client_gallery_homepage_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790866232693,
+      "tag": "0004_public_client_gallery_index",
+      "breakpoints": true
     }
   ]
 }
