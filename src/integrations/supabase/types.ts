@@ -121,30 +121,44 @@ export type Database = {
       }
       client_galleries: {
         Row: {
+          cover_photo_id: string | null
           created_at: string
           event_date: string | null
           id: string
+          is_visible: boolean
           name: string
           password_hash: string
           slug: string
         }
         Insert: {
+          cover_photo_id?: string | null
           created_at?: string
           event_date?: string | null
           id?: string
+          is_visible?: boolean
           name: string
           password_hash?: string
           slug: string
         }
         Update: {
+          cover_photo_id?: string | null
           created_at?: string
           event_date?: string | null
           id?: string
+          is_visible?: boolean
           name?: string
           password_hash?: string
           slug?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "client_galleries_cover_photo_id_fkey"
+            columns: ["cover_photo_id"]
+            isOneToOne: false
+            referencedRelation: "client_gallery_photos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_gallery_favorites: {
         Row: {
