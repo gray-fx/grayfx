@@ -29,6 +29,7 @@ import DiscordOAuthHandler from "./components/panel/DiscordOAuthHandler";
 import PanelLogin from "./pages/panel/PanelLogin";
 import PanelHome from "./pages/panel/PanelHome";
 import PanelStaffGuide from "./pages/panel/PanelStaffGuide";
+import HeroSlideshow from "./components/HeroSlideshow.tsx";
 
 const queryClient = new QueryClient();
 
