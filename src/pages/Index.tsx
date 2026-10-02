@@ -1,6 +1,6 @@
 import { Instagram, Camera, Mail, ExternalLink, ArrowRight, ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
-import PhotoCollage from "@/components/PhotoCollage";
+import HeroSlideshow from "@/components/HeroSlideshow";
 import ScrollSection from "@/components/ScrollSection";
 import GalleryGrid from "@/components/GalleryGrid";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
@@ -94,11 +94,11 @@ const Index = () => {
       {/* ===== HERO ===== */}
       <section className="relative flex min-h-[calc(100vh-4rem)] flex-col justify-end overflow-hidden">
         <div className="absolute inset-0">
-          <PhotoCollage />
+          <HeroSlideshow />
         </div>
-        {/* Readability overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/30 to-transparent" />
+        {/* Lighter readability overlays: only darken the bottom where the text sits */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/50 via-transparent to-transparent md:from-background/60" />
 
         <div className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-16 pt-32">
           <motion.div
@@ -116,7 +116,7 @@ const Index = () => {
 
           <motion.h1
             {...fade(0.1)}
-            className="mt-6 bg-gradient-to-br from-foreground via-foreground to-foreground/40 bg-clip-text font-display text-7xl font-bold leading-[0.9] tracking-tighter text-transparent md:text-9xl"
+            className="mt-6 bg-gradient-to-br from-foreground via-foreground to-foreground/70 bg-clip-text font-display text-7xl font-bold leading-[0.9] tracking-tighter text-transparent drop-shadow-lg md:text-9xl"
           >
             GrayFX
           </motion.h1>
