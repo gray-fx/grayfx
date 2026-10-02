@@ -144,15 +144,9 @@ const Index = () => {
 
           <ScrollSection delay={0.2}>
             <p className="mt-8 font-body text-lg leading-relaxed text-muted-foreground">
-              Hey, I'm Grayson — a photographer (and graphic designer) based in Newark, Delaware.
-              I mostly shoot sports, but I'm always down to capture pretty much anything: portraits,
-              events, landscapes, cars, you name it.
-            </p>
-            <p className="mt-6 font-body text-lg leading-relaxed text-muted-foreground">
-              I love what I do, and I try to make every shoot feel laid back and fun while still
-              walking away with photos you'll actually want to share. On the design side, I also put
-              together logos, posters, social graphics, and edits — basically whatever you need to
-              look good online or in print. If you've got an idea, let's make it happen.
+              I'm Grayson, a photographer and graphic designer based in Delaware.
+              I mostly shoot sports, but I'm always open to capture almost anything: portraits,
+              events, landscapes, cars, etc.
             </p>
           </ScrollSection>
 
