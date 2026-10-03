@@ -501,7 +501,7 @@ Deno.serve(async (req) => {
         });
         if (error) return json({ error: error.message }, 500);
       }
-      return json({ athletes: unique.length, log });
+      return json({ athletes: unique.length, log, version: "v3-log" });
     }
 
     return json({ error: `Unknown action: ${action}` }, 400);
