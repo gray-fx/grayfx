@@ -424,20 +424,52 @@ Deno.serve(async (req) => {
 
       const origin = new URL(rosters[0].url).origin;
       const rows: any[] = [];
+      // per-season diagnostics so the admin panel can show WHY data is missing
+      const log: Record<string, { saved: number; skipped: string[] }> = {};
+      // fingerprint of each roster page per season, to catch "site didn't actually switch years"
+      const sigs = new Map<string, Set<string>>();
 
       for (const [yearId, seasonLabel] of Object.entries(seasons)) {
+        const entry = (log[seasonLabel] = { saved: 0, skipped: [] as string[] });
         const cookie = await seasonCookie(rosters[0].url, origin, yearId);
-        if (!cookie) continue;
+        if (!cookie) {
+          entry.skipped.push("could not start session");
+          continue;
+        }
 
         const pages = await Promise.all(rosters.map((r) => get(r.url, cookie, 12000)));
         pages.forEach((p, i) => {
-          if (!p) return;
-          // guard: make sure the site actually switched to this season
-          const active = p.html.match(/selected="selected" value="(\d+)"/)?.[1];
-          if (active && active !== yearId) return;
+          const tag = `${rosters[i].sport} ${rosters[i].level}`;
+          if (!p) {
+            entry.skipped.push(`fetch failed: ${tag}`);
+            return;
+          }
+          // guard: if the page reports selected school years and none is the one we asked for, skip
+          const selectedYears = [...p.html.matchAll(/selected="selected"[^>]*value="(\d{4})"|value="(\d{4})"[^>]*selected="selected"/g)]
+            .map((m) => m[1] ?? m[2]);
+          if (selectedYears.length && !selectedYears.includes(yearId)) {
+            entry.skipped.push(`site stayed on ${selectedYears[0]}: ${tag}`);
+            return;
+          }
 
-          // each roster page is parsed using ITS OWN column headers
-          for (const pl of parseRoster(p.html)) {
+          const players = parseRoster(p.html);
+          if (!players.length) {
+            entry.skipped.push(`0 players parsed: ${tag}`);
+            return;
+          }
+
+          // identical roster already seen for another season => the year didn't really change
+          const sig = players.map((x) => `${x.first}|${x.last}|${x.jersey}|${x.grade}`).sort().join(";");
+          const known = sigs.get(rosters[i].url) ?? new Set<string>();
+          if (known.has(sig)) {
+            entry.skipped.push(`same as another season: ${tag}`);
+            return;
+          }
+          known.add(sig);
+          sigs.set(rosters[i].url, known);
+
+          entry.saved += players.length;
+          for (const pl of players) {
             rows.push({
               school_name: schoolName,
               school_url: schoolUrl || origin,
@@ -469,7 +501,7 @@ Deno.serve(async (req) => {
         });
         if (error) return json({ error: error.message }, 500);
       }
-      return json({ athletes: unique.length, seasons: Object.values(seasons) });
+      return json({ athletes: unique.length, log });
     }
 
     return json({ error: `Unknown action: ${action}` }, 400);
