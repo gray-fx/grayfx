@@ -17,12 +17,14 @@ export type Database = {
       athletes: {
         Row: {
           created_at: string
+          extra: Json | null
           first_name: string
           grade: string | null
           id: string
           jersey_number: string | null
           last_name: string
           level: string
+          position: string | null
           school_name: string
           school_url: string
           season: string
@@ -30,12 +32,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          extra?: Json | null
           first_name: string
           grade?: string | null
           id?: string
           jersey_number?: string | null
           last_name: string
           level: string
+          position?: string | null
           school_name: string
           school_url: string
           season: string
@@ -43,12 +47,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          extra?: Json | null
           first_name?: string
           grade?: string | null
           id?: string
           jersey_number?: string | null
           last_name?: string
           level?: string
+          position?: string | null
           school_name?: string
           school_url?: string
           season?: string
