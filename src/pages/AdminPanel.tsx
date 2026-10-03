@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key, ImageIcon, CreditCard, FolderOpen, Images, PanelLeftClose } from "lucide-react";
+import { CalendarDays, LogIn, LogOut, Loader2, Megaphone, Shield, Key, ImageIcon, CreditCard, FolderOpen, Images, PanelLeftClose, Trophy } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import AdminPhotosTab from "@/components/admin/AdminPhotosTab";
 import AdminPaymentsTab from "@/components/admin/AdminPaymentsTab";
 import AdminPortfoliosTab from "@/components/admin/AdminPortfoliosTab";
 import AdminGalleriesTab from "@/components/admin/AdminGalleriesTab";
+import AdminAthleteScraper from "@/components/ScrapeAthletesScraper";
 
 const AdminPanel = () => {
   const { toast } = useToast();
@@ -42,6 +43,7 @@ const AdminPanel = () => {
     ] },
     { label: "Site", items: [
       { value: "announcements", label: "Announcements", icon: Megaphone },
+      { value: "athletes", label: "Athlete scraper", icon: Trophy },
       { value: "payments", label: "Payment options", icon: CreditCard },
       { value: "maintenance", label: "Maintenance", icon: Shield },
     ] },
@@ -50,7 +52,7 @@ const AdminPanel = () => {
 
   const titles: Record<string, string> = {
     calendar: "Availability", galleries: "Client galleries", portfolios: "Portfolios", photos: "Site photos",
-    announcements: "Announcements", payments: "Payment options", maintenance: "Maintenance", credentials: "Login details",
+    announcements: "Announcements", payments: "Payment options", athletes: "Athlete scraper", maintenance: "Maintenance", credentials: "Login details",
   };
 
   useEffect(() => {
@@ -130,7 +132,7 @@ const AdminPanel = () => {
 
   const content: Record<string, React.ReactNode> = {
     calendar: <AdminCalendarTab />, galleries: <AdminGalleriesTab />, portfolios: <AdminPortfoliosTab />,
-    photos: <AdminPhotosTab />, announcements: <AdminAnnouncementsTab />, payments: <AdminPaymentsTab />,
+    photos: <AdminPhotosTab />, announcements: <AdminAnnouncementsTab />, payments: <AdminPaymentsTab />, athletes: <AdminAthleteScraper />,
     maintenance: <AdminMaintenanceTab />, credentials: <AdminCredentialsTab />,
   };
 
