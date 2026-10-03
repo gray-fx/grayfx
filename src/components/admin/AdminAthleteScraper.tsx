@@ -21,6 +21,9 @@ const ScrapeAthletesPanel = () => {
   const [password, setPassword] = useState("");
   const [scraping, setScraping] = useState(false);
   const [progress, setProgress] = useState("");
+  const [report, setReport] = useState<
+    Record<string, { saved: number; skipped: Record<string, number> }>
+  >({});
   const { toast } = useToast();
 
   const run = async () => {
@@ -34,6 +37,8 @@ const ScrapeAthletesPanel = () => {
 
     setScraping(true);
     setProgress("Starting scrape...");
+    setReport({});
+    const agg: Record<string, { saved: number; skipped: Record<string, number> }> = {};
     try {
       const { data: listData } = await supabase.functions.invoke("scrape-athletes", {
         body: { action: "list-schools" },
@@ -70,6 +75,16 @@ const ScrapeAthletesPanel = () => {
           if (sErr) throw sErr;
           if (s?.error) throw new Error(s.error);
           totalAthletes += s.athletes || 0;
+          for (const [season, e] of Object.entries(s.log || {}) as [string, any][]) {
+            const a = (agg[season] ||= { saved: 0, skipped: {} });
+            a.saved += e.saved || 0;
+            for (const msg of e.skipped || []) {
+              // group by reason, ignoring the sport/level after the colon
+              const reason = String(msg).split(":")[0];
+              a.skipped[reason] = (a.skipped[reason] || 0) + 1;
+            }
+          }
+          setReport({ ...agg });
         }
       }
 
@@ -125,6 +140,22 @@ const ScrapeAthletesPanel = () => {
       </div>
 
       {progress && <p className="text-sm text-muted-foreground">{progress}</p>}
+
+      {Object.keys(report).length > 0 && (
+        <div className="text-sm space-y-1">
+          <p className="font-medium">Per-season results</p>
+          {Object.entries(report)
+            .sort(([a], [b]) => b.localeCompare(a))
+            .map(([season, r]) => (
+              <p key={season} className="text-muted-foreground">
+                <strong className="text-foreground">{season}</strong>: {r.saved} saved
+                {Object.entries(r.skipped).map(([reason, n]) => (
+                  <span key={reason}> · {n}× {reason}</span>
+                ))}
+              </p>
+            ))}
+        </div>
+      )}
     </Card>
   );
 };
