@@ -23,6 +23,17 @@ interface AthleteRecord {
   extra: Record<string, string> | null;
 }
 
+const JERSEY_KEY = /jersey|uniform|(^|\s)(#|no|num|number)(\s|$)/i;
+
+/** Jersey number for one roster entry: the real column, else any jersey-like key in extra. */
+const jerseyOf = (r: AthleteRecord) => {
+  if (r.jersey_number && /^\d{1,3}$/.test(r.jersey_number)) return r.jersey_number;
+  for (const [k, v] of Object.entries(r.extra ?? {})) {
+    if (JERSEY_KEY.test(k) && /^\d{1,3}$/.test(String(v).trim())) return String(v).trim();
+  }
+  return "";
+};
+
 const LEVEL_ORDER = ["Varsity", "JV", "Freshman", "Middle School", "8th Grade", "7th Grade"];
 
 const levelClass = (level: string) =>
@@ -55,7 +66,8 @@ const AthleteTimeline = ({ name, records }: { name: string; records: AthleteReco
   const extras = (season: string) => {
     const merged: Record<string, string> = {};
     bySeason(season).forEach((r) => Object.assign(merged, r.extra ?? {}));
-    return Object.entries(merged);
+    // jersey numbers are per sport, so they're shown next to level, not here
+    return Object.entries(merged).filter(([k]) => !JERSEY_KEY.test(k));
   };
   const hasExtras = seasons.some((s) => extras(s).length > 0);
 
@@ -110,10 +122,10 @@ const AthleteTimeline = ({ name, records }: { name: string; records: AthleteReco
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${levelClass(r.level)}`}>
                             {r.level}
                           </span>
-                          {(r.jersey_number || r.position) && (
+                          {(jerseyOf(r) || r.position) && (
                             <span className="ml-2 text-xs text-muted-foreground">
-                              {r.jersey_number && `#${r.jersey_number}`}
-                              {r.jersey_number && r.position && " · "}
+                              {jerseyOf(r) && `#${jerseyOf(r)}`}
+                              {jerseyOf(r) && r.position && " · "}
                               {r.position}
                             </span>
                           )}
@@ -153,7 +165,7 @@ const AthleteFinder = () => {
   const [results, setResults] = useState<AthleteRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -186,11 +198,29 @@ const AthleteFinder = () => {
     }
   }, [query, toast]);
 
-  const grouped = results.reduce<Record<string, AthleteRecord[]>>((acc, r) => {
-    const key = `${r.first_name} ${r.last_name}`;
-    (acc[key] ||= []).push(r);
-    return acc;
-  }, {});
+  // One card per person: same name + school, merging a name across schools only
+  // when the seasons don't overlap (a transfer). Overlapping seasons = different people.
+  const grouped = useMemo(() => {
+    const byKey: Record<string, AthleteRecord[]> = {};
+    results.forEach((r) => {
+      (byKey[`${r.first_name} ${r.last_name}|${r.school_url}`] ||= []).push(r);
+    });
+    const clusters: { name: string; records: AthleteRecord[]; seasons: Set<string> }[] = [];
+    Object.entries(byKey).forEach(([key, recs]) => {
+      const name = key.split("|")[0];
+      const seasons = new Set(recs.map((r) => r.season));
+      const target = clusters.find(
+        (c) => c.name === name && ![...seasons].some((x) => c.seasons.has(x)),
+      );
+      if (target) {
+        target.records.push(...recs);
+        seasons.forEach((x) => target.seasons.add(x));
+      } else {
+        clusters.push({ name, records: recs, seasons });
+      }
+    });
+    return clusters;
+  }, [results]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -235,13 +265,13 @@ const AthleteFinder = () => {
           </div>
         )}
 
-        {Object.entries(grouped).map(([name, records]) => {
+        {grouped.map(({ name, records }, idx) => {
           const schools = [...new Set(records.map((r) => r.school_name))];
           const sports = [...new Set(records.map((r) => r.sport))];
           return (
             <Card
-              key={name}
-              onClick={() => setSelected(name)}
+              key={`${name}-${idx}`}
+              onClick={() => setSelected(idx)}
               className="mb-4 bg-card border-border overflow-hidden cursor-pointer hover:border-primary transition-colors"
             >
               <div className="px-5 py-4 flex items-center justify-between gap-4">
@@ -264,13 +294,15 @@ const AthleteFinder = () => {
         })}
       </div>
 
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+      <Dialog open={selected !== null} onOpenChange={(o) => !o && setSelected(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-montserrat">{selected}</DialogTitle>
+            <DialogTitle className="font-montserrat">
+              {selected !== null && grouped[selected]?.name}
+            </DialogTitle>
           </DialogHeader>
-          {selected && grouped[selected] && (
-            <AthleteTimeline name={selected} records={grouped[selected]} />
+          {selected !== null && grouped[selected] && (
+            <AthleteTimeline name={grouped[selected].name} records={grouped[selected].records} />
           )}
         </DialogContent>
       </Dialog>
