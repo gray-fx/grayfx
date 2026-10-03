@@ -22,7 +22,7 @@ import AdminPhotosTab from "@/components/admin/AdminPhotosTab";
 import AdminPaymentsTab from "@/components/admin/AdminPaymentsTab";
 import AdminPortfoliosTab from "@/components/admin/AdminPortfoliosTab";
 import AdminGalleriesTab from "@/components/admin/AdminGalleriesTab";
-import AdminAthleteScraper from "@/components/ScrapeAthletesScraper";
+import AdminAthleteScraper from "@/components/admin/AdminAthleteScraper";
 
 const AdminPanel = () => {
   const { toast } = useToast();
