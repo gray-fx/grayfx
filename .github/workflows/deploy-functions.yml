@@ -11,6 +11,6 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase functions deploy scrape-athletes --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+      - run: supabase functions deploy scrape-athletes --project-ref xgezfkrayeucrstftekp
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
